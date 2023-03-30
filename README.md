@@ -1,6 +1,6 @@
 # Rooting the Cradlepoint IBR600C and other stories
 
-This is a description of the work I did with [stulle123](https://github.com/stulle123) in 2022 on the Cradlepoint IBR600C-150M-B-EU with FW Version 7.22.60.
+This is a description of the work I did with [stulle123](https://github.com/stulle123) Q4 2022 on the Cradlepoint IBR600C-150M-B-EU with FW Version 7.22.60.
 
 ## IBR600C Flashdump
 
@@ -69,11 +69,11 @@ NAND Flash dump is complicated to dump, I recorded the SPI interface during the 
 
 ![ROOTFS](./pictures/rootfs.png)
 
-First the raw data are extracted with the Saleae SPI decoder feature and transformed in binary format with a python script. However, the raw data still contain some handshake information:
+First the raw data are extracted with the Saleae SPI decoder feature and transformed in binary format with a [python script](./scripts/make_bin.py). However, the raw data still contain some handshake informationas we see on the waveform:
 
 ![handshake](./pictures/handshake.png)
 
-A second script removes the handshake and we have now the root filesystem:
+A [second script](./scripts/extract_nand.py) removes the handshake and we have now the root filesystem:
 
 ```
 binwalk rootfs.cradl
@@ -82,7 +82,12 @@ DECIMAL       HEXADECIMAL     DESCRIPTION
 0             0x0             Squashfs filesystem, little endian, version 4.0, compression:xz, size: 18464354 bytes, 2026 inodes, blocksize: 262144 bytes, created: 2022-06-02 18:01:34
 ```
 
+With `unsquashfs` we can extract all the files.
+
+## Software Update Mechanism
+
 
 
 ## Discosure
 
+We disclosed our findings to Cradlepoint on 2023-01-05.
