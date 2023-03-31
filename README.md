@@ -272,7 +272,7 @@ crc32 rootfsimage
 Note the length of the rootfs image in bytes, convert in hex:
 > E.g. 19034112 bytes, or 0x01227000 bytes
 
-Open kernel.gz in a hex editor, change the CRC and length. For example:
+Open kernel.gz in a hex editor, change the CRC and length. For example (last three bytes):
 * Original (CRC - Length - 0x0):
 > 0xB4D11088 0x00733302 0x00000000
 * Changed :
