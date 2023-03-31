@@ -92,7 +92,14 @@ With `unsquashfs` we can extract all the files.
 ## Patch the Firmware to get a Root Shell
 The device implements a shell accessible over SSH or internal webserver. However, this is not a linux shell but has only limited application-related commands. We will now patch this shell to get a linux root shell. The device SW is based on Linux and the application is almost completely written in Python.
 
-Moreover, the application includes a feature that (re-)enables silent boot every time the application starts. We also need to patch this feature. In `/service_manager/services` we find a file called `silentboot.pyc`. Let's decompile this file with `decompyle3`:
+### Patching the CPSHELL
+***TODO: Python CPSHELL PATCH***
+
+
+### Pachting the autoomatic silent mode reenabling
+
+The application includes a feature that (re-)enables silent boot every time the application starts. We also need to patch this feature. In `/service_manager/services` we find a file called `silentboot.pyc`. Let's decompile this file with `decompyle3`:
+
 ```
 import services, cp
 from services.utils.ubootenv import UbootEnv
@@ -132,13 +139,13 @@ if cp.platform == 'router':
     services.register(SilentBoot)
 ```
 
+### Recompile the squashfs rootfs image
+
 Now we have to recompile the python source file in a `pyc` file and replace the original one. We can then re-build the squashfs image:
 
 ```
 mksquashfs squashfs-root/ rootfsimage -b 262144 -comp xz -no-xattrs
 ```
-
-***Here: How to patch root shell***
 
 In the next chapter we will see how to flash the squashfs image in NAND Flash.
  
@@ -147,8 +154,8 @@ In the next chapter we will see how to flash the squashfs image in NAND Flash.
 To test our patched firmware we now need to flash it back in the NAND Flash. These are the steps:
 1. Boot the device with silent mode **disabled** (with buspirate and flashrom, don't forget the CRC)
 2. Interrupt u-boot via serial interface and get a u-boot console
-3. Use TFTP Boot to boot a kernel from openWRT with prompt and root shell
-4. Use the UBI commands to erase and flash the NAND Flash Kernel and ROOTFS
+3. Use TFTP Boot to boot a live image containing kernel+rootfs from openWRT with prompt and root shell
+4. Use the UBI commands to erase and flash the NAND Flash KERNEL and ROOTFS partitions
 
 **Caveat**: even if only ROOTFS is changed, it is necessary to update the KERNEL too. 
 
@@ -158,10 +165,10 @@ The raw kernel image dumped from flash contains:
 * Linux Kernel in gzip format 
 * ROOTFS parameters (crc and length) located at the end of the gzip kernel binary
 * Device Tree
-* 
+
 The image uses u-boot image format so we can use `mkimage` and `dumpimage`. 
 
-First print info:
+First we can print some info:
 
 ```
 mkimage -l kernelimage 
@@ -261,9 +268,11 @@ Note: `image.its` is provided [here](./boot/image.its)
 
 Connect your host pc to the Cradlepoint device with: 
 1. a serial terminal 8n1,115200 
-2. an ethernet cable connected to the LAN port
+2. an ethernet cable connected to the LAN (***TODO:CHECK!!!***) port
 
-Boot the Cradlepoint with modified NOR FLash (silent mode disabled), so that Uboot messages are displayed. Then press 1 to load image via TFTP (9 seconds break). Set up a TFTP on the host computer with IP = 192.168.0.200 and put the image `wnc-fit-uImage_v005.itb` (do not rename, provided [here](./boot/wnc-fit-uImage_v005.itb)) in the TFTP directory. This image contains the kernel and rootfs from openWRT. 
+Set up a TFTP server on the host computer with `IP = 192.168.0.200` and put the image `wnc-fit-uImage_v005.itb` (do not rename, provided [here](./boot/wnc-fit-uImage_v005.itb)) in the TFTP directory. This image contains the kernel and rootfs from openWRT. 
+
+Boot the Cradlepoint with modified NOR FLash (silent mode disabled), so that Uboot messages are displayed. Then press 1 to load image via TFTP (9 seconds break). 
 Note that the TFTP Server IP can be changed by modifying the u-boot variable ´serverip´ and using ´saveenv´.
 Cradlepoint will TFTP the file, unpack it and start the kernel. Now we have a root shell on the serial interface:
 ```
@@ -288,11 +297,12 @@ with `ssh root@192.168.1.1`.
 
 How to flash the NAND Flash:
 
-1. `scp` the new rootfsimage and kernelimage to the `/tmp/` directory (reminder: everything is in SDRAM with the openWRT image).
+1. `scp` the new rootfsimage and kernelimage to the `/tmp/` directory of the Cradlepoint device (reminder: everything is in SDRAM with the openWRT image).
 2. Attach the NAND Flash partition containing KERNEL and ROOTFS called `/dev/mtd1`:
 ```
 ubiattach -b 1 -m 1
 ```
+Now you shall see the three ubi volumes `/dev/ubi0_0` (kernel), `/dev/ubi0_1` (rootfs) and `/dev/ubi0_2` (empty, used as buffer).
 3. Wipe out the first partition (partition 0), which contains the kernel image.
 ```
 ubiupdatevol /dev/ubi0_0 -t
@@ -317,7 +327,7 @@ Use ubinfo to display the size of the image and partitions. Note that the third 
 ```
 ubirsvol /dev/ubi0 -n 2 -s [nb of bytes calculated to have enough place for ubi0_1]
 ```
-8. Re-do step 7. if needed
+8. Re-do step 7. if needed.
 9. Flash the rootfs image
 ```
 ubiupdatevol /dev/ubi0_1 /tmp/rootfsimage
@@ -329,8 +339,6 @@ ubidettach ubi -m 1
 11. Reboot. The device shall boot with the new rootfs without CRC error.
 
 **Note about UBI**: Between the bare NAND FLash and the squashfs filesystem there is a layer inbetween called [UBI](http://www.linux-mtd.infradead.org/doc/ubi.html), which takes care of the Flash block management. 
-
-
 
 ## Software Update Mechanism
 
