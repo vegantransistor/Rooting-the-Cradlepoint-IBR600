@@ -152,13 +152,13 @@ To test our patched firmware we now need to flash it back in the NAND Flash. The
 
 **Caveat**: even if only ROOTFS is changed, it is necessary to update the KERNEL too. 
 
-
 ### Preparation of KERNEL image
 
 The raw kernel image dumped from flash contains:
 * Linux Kernel in gzip format 
 * ROOTFS parameters (crc and length) located at the end of the gzip kernel binary
 * Device Tree
+* 
 The image uses u-boot image format so we can use `mkimage` and `dumpimage`. 
 
 First print info:
@@ -251,14 +251,82 @@ Open kernel.gz in a hex editor, change the CRC and length. For example:
 > 0x67452301 0x00702201 0x00000000
 
 Now we can re-build the KERNEL image:
-First we need to decompile the device tree with `dtc`, and then we can build the KERNEL image with `mkimage`:
 
 ```
-dtc -I dtb -O dts dt.dtb -o dt.dts 
 mkimage -f image.its kernelimage
 ```
 Note: `image.its` is provided [here](./boot/image.its)
 
+### Flash the images
+
+Connect your host pc to the Cradlepoint device with: 
+1. a serial terminal 8n1,115200 
+2. an ethernet cable connected to the LAN port
+
+Boot the Cradlepoint with modified NOR FLash (silent mode disabled), so that Uboot messages are displayed. Then press 1 to load image via TFTP (9 seconds break). Set up a TFTP on the host computer with IP = 192.168.0.200 and put the image `wnc-fit-uImage_v005.itb` (do not rename, provided [here](./boot/wnc-fit-uImage_v005.itb)) in the TFTP directory. This image contains the kernel and rootfs from openWRT. 
+Note that the TFTP Server IP can be changed by modifying the u-boot variable ´serverip´ and using ´saveenv´.
+Cradlepoint will TFTP the file, unpack it and start the kernel. Now we have a root shell on the serial interface:
+```
+BusyBox v1.35.0 (2022-10-18 13:09:23 UTC) built-in shell (ash)
+_______ ________ __
+| |.-----.-----.-----.| | | |.----.| |_
+| - || _ | -__| || | | || _|| _|
+|_______|| __|_____|__|__||________||__| |____|
+|__| W I R E L E S S F R E E D O M
+-----------------------------------------------------
+OpenWrt SNAPSHOT, r20976-7129d1e9c9
+-----------------------------------------------------
+=== WARNING! =====================================
+There is no root password defined on this device!
+Use the "passwd" command to set up a new password
+in order to prevent unauthorized SSH logins.
+--------------------------------------------------
+root@OpenWrt:~#
+```
+Since we want to update the NAND Flash with big images, we will now switch so SSH. Change the IP Address of the host computer to 192.168.1.200 and SSH the Cradlepoint
+with `ssh root@192.168.1.1`. 
+
+How to flash the NAND Flash:
+
+1. `scp` the new rootfsimage and kernelimage to the `/tmp/` directory (reminder: everything is in SDRAM with the openWRT image).
+2. Attach the NAND Flash partition containing KERNEL and ROOTFS called `/dev/mtd1`:
+```
+ubiattach -b 1 -m 1
+```
+3. Wipe out the first partition (partition 0), which contains the kernel image.
+```
+ubiupdatevol /dev/ubi0_0 -t
+```
+4. Flash the kernel image
+```
+ubiupdatevol /dev/ubi0_0 /tmp/kernelimage
+```
+5. Wipe out the second partition (partition 1), which contains the rootfs.
+```
+ubiupdatevol /dev/ubi0_1 -t
+```
+6. *Optional*: Resize the rootfs partition if the new rootfs is bigger than the partition size (i.e. the original one):
+```
+ubirsvol /dev/ubi0 -n 1 -s [nb of bytes of the new rootfs image]
+```
+7. *Optional*: Resize the third partition if the step before failed with following  error:
+```
+ubi_resize_volume: not enough PEBs: requested 4, available 0
+```
+Use ubinfo to display the size of the image and partitions. Note that the third partition does not contain any data so it can be resized.
+```
+ubirsvol /dev/ubi0 -n 2 -s [nb of bytes calculated to have enough place for ubi0_1]
+```
+8. Re-do step 7. if needed
+9. Flash the rootfs image
+```
+ubiupdatevol /dev/ubi0_1 /tmp/rootfsimage
+```
+10. Dettach the ubi partition
+```
+ubidettach ubi -m 1
+```
+11. Reboot. The device shall boot with the new rootfs without CRC error.
 
 **Note about UBI**: Between the bare NAND FLash and the squashfs filesystem there is a layer inbetween called [UBI](http://www.linux-mtd.infradead.org/doc/ubi.html), which takes care of the Flash block management. 
 
