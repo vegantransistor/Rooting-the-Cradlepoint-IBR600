@@ -404,9 +404,9 @@ ubidettach ubi -m 1
 ```
 11. Reboot. The device shall boot with the new rootfs without CRC error.
  
-**Note about UBI**: Between the bare NAND FLash and the squashfs filesystem there is a layer in-between called [UBI](http://www.linux-mtd.infradead.org/doc/ubi.html), which takes care of the Flash block management. 
+**Note about UBI**: Between the bare NAND FLash and the squashfs filesystem there is a layer in-between called [UBI](http://www.linux-mtd.infradead.org/doc/ubi.html), which takes care among other things of the Flash block management. 
 
-If we `ssh` the device now and type `sh` we get a root shell:
+If we `ssh` the device and type `sh` we get a root shell:
 
 ***TODO: ADD ROOTSHELL***
 
