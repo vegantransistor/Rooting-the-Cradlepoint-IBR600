@@ -14,7 +14,7 @@ I could not resist to open it and see if I could get some information about the 
 
 ***TODO:PIC with UART PINS***
 
-At boot time, the UART interface only gives very limited information about the first bootloader, after that it becomes silent, so let's have a look inside the Flash memories. NOR and NAND Flash is a typical combination - bootloaders in NOR, OS and Application in NAND. Both flashes are connected via the same SPI bus to the processor. NAND Flashes are not easy to dump because of the bad blocks and error management. Here is a picture of the device opened with logic analyser, serial interface and bus pirate connected:
+At boot time, the UART interface only gives very limited information about the first bootloader, after that it becomes silent, so let's have a look inside the Flash memories. NOR and NAND Flash is a typical combination - bootloaders in NOR, OS and Application in NAND. Both flashes are connected via the same SPI bus to the processor. NAND Flashes are not easy to dump because of the bad blocks and error management. Here is a picture of the device opened with logic analyzer, serial interface and bus pirate connected:
 
 ![opened](./pictures/opened.png)
 
@@ -36,7 +36,7 @@ The u-boot environmental variables are a good starting point: in our case, a `SI
 > silent=yes
 
 We can change it to `no`.
-**Caveat**: a CRC32 of the whole NOR Flash block (65536 bytes) protects the integrity of the u-boot bootenv. It is placed at the very beginning of the flash block. we need to recalculate the CRC32 on the flash block, CRC32 excluded (65536-4 bytes) and put it at the beginning of the block.
+**Caveat**: a CRC32 of the whole NOR Flash block (65536 bytes) protects the integrity of the u-boot bootenv. It is placed at the very beginning of the flash block. we need to recalculate the CRC32 on the flash block, CRC32 excluded (65536-4 bytes) and put it at the beginning of the block. The patched NOR Flash block containing the u-boot environmental variables is provided [here](./boot/nor_block_ubootenv_nosilent.bin).
 
 Now reflash the NOR device:
 ```
@@ -89,7 +89,7 @@ At this point, it will be possible to load some live image (SDRAM) in the device
 
 ### NAND 
 
-NAND Flash dump is complicated to dump, I recorded the SPI interface during the boot phase with the [SALEAE](https://www.saleae.com/) logic analyser. There are two big activity blocks corresponding to the Linux Kernel and the Root Filesystem. Here is the rootfs:
+NAND Flash dump is complicated to dump, I recorded the SPI interface during the boot phase with the [SALEAE](https://www.saleae.com/) logic analyzer. There are two big activity blocks corresponding to the Linux Kernel and the Root Filesystem. Here is the rootfs:
 
 ![ROOTFS](./pictures/rootfs.png)
 
@@ -359,7 +359,7 @@ ubidettach ubi -m 1
 ```
 11. Reboot. The device shall boot with the new rootfs without CRC error.
 
-**Note about UBI**: Between the bare NAND FLash and the squashfs filesystem there is a layer inbetween called [UBI](http://www.linux-mtd.infradead.org/doc/ubi.html), which takes care of the Flash block management. 
+**Note about UBI**: Between the bare NAND FLash and the squashfs filesystem there is a layer in-between called [UBI](http://www.linux-mtd.infradead.org/doc/ubi.html), which takes care of the Flash block management. 
 
 ## Software Update Mechanism
 
