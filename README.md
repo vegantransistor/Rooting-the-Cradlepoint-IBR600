@@ -366,11 +366,11 @@ ubidettach ubi -m 1
 
 If we `ssh` the device now and type `???` we get a root shell!
 
-## Software Update Mechanism
+## Software Update Mechanism (?)
 
-## Man in the Middle 
+## Man in the Middle (?)
 
-## Firmware Emulation with QEMU
+## Firmware Emulation with QEMU >>> YES!
 
 ## Disclosure
 
