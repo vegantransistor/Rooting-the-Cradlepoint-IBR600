@@ -158,9 +158,11 @@ if cp.platform == 'router':
     services.register(SilentBoot)
 ```
 
+We have to recompile the python source file in a `pyc` file and replace the original one. 
+
 ### Recompile the squashfs rootfs image
 
-Now we have to recompile the python source file in a `pyc` file and replace the original one. We can then re-build the squashfs image:
+After patching the application, we can re-build the squashfs image:
 
 ```
 mksquashfs squashfs-root/ rootfsimage -b 262144 -comp xz -no-xattrs
