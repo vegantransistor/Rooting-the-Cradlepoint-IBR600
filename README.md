@@ -1,4 +1,4 @@
-# Rooting the Cradlepoint IBR600C and other stories
+# Rooting the Cradlepoint IBR600C
 
 This is a description of the work I did with [stulle123](https://github.com/stulle123) Q4 2022 on the Cradlepoint IBR600C-150M-B-EU with FW Version 7.22.60.
 
@@ -111,11 +111,48 @@ With `unsquashfs` we can extract all the files.
 With the same process we can extract the kernel image.
 
 ## Patch the Firmware to get a Root Shell
-The device implements a shell accessible over SSH or internal webserver. However, this is not a linux shell but has only limited application-related commands. We will now patch this shell to get a linux root shell. The device firmware is based on Linux and the application is almost completely written in Python.
+The device implements a shell accessible over SSH or internal webserver. However, this is not a linux shell, it has only limited application-related commands. We will now patch this shell to get a linux root shell. 
+
+The device firmware is based on Linux and the application is almost completely written in Python.
 
 ### Patching the CPSHELL
 
-***TODO: Python CPSHELL PATCH***
+In the `/service_manager/` we find a file called `cpshell.pyc`. This implements the reduced cradlepoint shell. If we `decompyle3` it we can find following interesting code:
+```
+            if self.superuser:
+                self.cmds.update({'sh':(
+                  self.sh, 'Internal Use Only'), 
+                 'python':(
+                  self.python, 'Internal Use Only')})
+```
+And `superuser` is initilized to `false` :face_with_spiral_eyes:. We just need to change the first line to `if not self.superuser:`
+
+`decompyle3` is not able to deompile this file error-free, so that we can't just patch the `.py` file and recompile it. We have to patch the compiled python code `.pyc`.
+First we can disassemble the file with `pydisasm` (https://github.com/rocky/python-xdis).
+```
+pydisasm --format xasm cpshell.pyc > cpshell.pyasm
+```
+Then we search for the variable `superuser` and branches associated to this variable. Here is the branch related to the code above:
+```
+237:
+            LOAD_FAST            0 (self)
+            LOAD_ATTR            13 (superuser)
+            EXTENDED_ARG         1 (256)
+            POP_JUMP_IF_FALSE    L500 (to 500)
+```
+We need to find the position of this `POP_JUMP_IF_FALSE` branch in the compiled python file and replce it with `POP_JUMP_IF_TRUE`. With following code we can print the opcodes related to the assembly code above:
+```
+import opcode
+for op in ['LOAD_FAST', 'LOAD_ATTR', 'EXTENDED_ARG', 'POP_JUMP_IF_FALSE']:
+print('%-16s%s' % (op, opcode.opmap[op].to_bytes(1,byteorder='little')))
+```
+A bytecode instruction is (mostly) composed of the 8 bit opcode (8 bit) and a 8 bit parameter. In our case we can reconstruct following binary sequence:
+```
+0x7c 0x00 0x6a 0x0d 0x90 0x01 0x72
+```
+There is only one match in the `cpshell.pyc` file.
+
+With `opcode` we can find that the opcaode for `POP_JUMP_IF_FALSE` is `0x73`, so that we just need to change `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x72` to `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x73`. Our cpshell is patched.
 
 ### Pachting the automatic silent mode reenabling function
 
@@ -361,16 +398,10 @@ ubiupdatevol /dev/ubi0_1 /tmp/rootfsimage
 ubidettach ubi -m 1
 ```
 11. Reboot. The device shall boot with the new rootfs without CRC error.
-
+ 
 **Note about UBI**: Between the bare NAND FLash and the squashfs filesystem there is a layer in-between called [UBI](http://www.linux-mtd.infradead.org/doc/ubi.html), which takes care of the Flash block management. 
 
 If we `ssh` the device now and type `???` we get a root shell!
-
-## Software Update Mechanism (?)
-
-## Man in the Middle (?)
-
-## Firmware Emulation with QEMU >>> YES!
 
 ## Disclosure
 
