@@ -21,8 +21,28 @@ At boot time, the UART interface only gives very limited information about the f
 ### NOR
 
 The NOR Flash is easy to dump with a [Bus Pirate](http://dangerousprototypes.com/docs/Bus_Pirate) and [Flashrom](https://www.flashrom.org/Flashrom). The content is not encrypted and secure boot is not in place. 
+Steps to dump the NOR Flash:
+1. Connect the Bus Pirate SPI interface to the NOR Flash located on the backside of the PCB:
 
-The u-boot environmental variables are a good starting point: in our case, a `SILENT` variable is set to `YES`. By changing it to `NO`, we get a u-boot console:
+***TODO:PIC of NOR with Pinout***
+
+2. Put the main processor in `RESET` state. This is needed because we cannot have two SPI masters. 
+3. Dump the flash with flashrom (change with your serial interface):
+```
+flashrom -V -p buspirate_spi:dev=/dev/tty.usbserial-AG0JGQV3,serialspeed=230400 -n -r nor_dump.bin
+```
+
+The u-boot environmental variables are a good starting point: in our case, a `SILENT` variable is set to `YES`:
+> silent=yes
+
+We can change it to `NO`.
+**Caveat**: a CRC32 of the whole NOR Flash block (65536 bytes) protects the integrity of the u-boot bootenv. It is placed at the very beginning of the flash block. we need to recalculate the CRC32 on the flash block, CRC32 excluded (65536-4 bytes) and put it at the beginning of the block.
+
+Now reflash the NOR device:
+```
+flashrom -V -p buspirate_spi:dev=/dev/tty.usbserial-AG0JGQV3,serialspeed=230400 -n -w nor_dump_nosilent.bin
+```
+Boot the device, we now have a u-boot console (!):
 
 ```
 U-Boot 2012.07 [Trail Mix GARNET v9.40,local] (Jan 04 2018 - 11:42:32)
@@ -64,9 +84,8 @@ Please choose the operation:
    9: Load Boot Loader code then write to Flash via TFTP. 
  9 ... 0 
 ```
-**Caveat**: a CRC32 of the whole NOR Flash block (65536 bytes) protects the integrity of the u-boot bootenv. It is placed at the very beginning of the flash block. If you want to change some variables, don't forget to recalculate the CRC32 on the flash block, CRC32 excluded (65536-4 bytes).
 
-At this point, it may be possible to load some [openWRT](https://openwrt.org/) firmware. TFTP loader is implemented in u-boot.
+At this point, it will be possible to load some live image (SDRAM) in the device via TFTP.
 
 ### NAND 
 
@@ -93,8 +112,8 @@ With `unsquashfs` we can extract all the files.
 The device implements a shell accessible over SSH or internal webserver. However, this is not a linux shell but has only limited application-related commands. We will now patch this shell to get a linux root shell. The device SW is based on Linux and the application is almost completely written in Python.
 
 ### Patching the CPSHELL
-***TODO: Python CPSHELL PATCH***
 
+***TODO: Python CPSHELL PATCH***
 
 ### Pachting the autoomatic silent mode reenabling
 
