@@ -89,7 +89,7 @@ At this point, it will be possible to load some live image (SDRAM) in the device
 
 ### NAND 
 
-NAND Flash dump is complicated to dump, I recorded the SPI interface during the boot phase with the [SALEAE](https://www.saleae.com/) logic analyzer. There are two big activity blocks corresponding to the Linux Kernel and the Root Filesystem. Here is the rootfs:
+NAND Flash dump is complicated to dump, I recorded the SPI interface during the boot phase with the [SALEAE](https://www.saleae.com/) logic analyzer. There are two big activity blocks corresponding to the Linux Kernel (first) and the Root Filesystem. Here is the rootfs:
 
 ![ROOTFS](./pictures/rootfs.png)
 
@@ -107,6 +107,8 @@ DECIMAL       HEXADECIMAL     DESCRIPTION
 ```
 
 With `unsquashfs` we can extract all the files.
+
+With the same process we can extract the kernel image.
 
 ## Patch the Firmware to get a Root Shell
 The device implements a shell accessible over SSH or internal webserver. However, this is not a linux shell but has only limited application-related commands. We will now patch this shell to get a linux root shell. The device firmware is based on Linux and the application is almost completely written in Python.
