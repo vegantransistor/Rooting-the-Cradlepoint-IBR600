@@ -60,6 +60,7 @@ Please choose the operation:
    9: Load Boot Loader code then write to Flash via TFTP. 
  9 ... 0 
 ```
+**Caveat**: a CRC32 of the whole NOR Flash block protects the integrity of the u-boot bootenv It is placed at the very beginning of the flash block. If you want to change some variables, don't forget to recalculate the CRC32 on the flash block, CRC32 excluded (65536-4 bytes).
 
 At this point, it may be possible to load some [openWRT](https://openwrt.org/) firmware. TFTP loader is implemented in u-boot.
 
@@ -84,9 +85,13 @@ DECIMAL       HEXADECIMAL     DESCRIPTION
 
 With `unsquashfs` we can extract all the files.
 
+## Patch the Firmware to get a Root Shell
+
+## Flash the patched Firmware 
+
 ## Software Update Mechanism
 
-
+## Man in the Middle 
 
 ## Discosure
 
