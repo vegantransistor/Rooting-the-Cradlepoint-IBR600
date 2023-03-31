@@ -109,7 +109,7 @@ DECIMAL       HEXADECIMAL     DESCRIPTION
 With `unsquashfs` we can extract all the files.
 
 ## Patch the Firmware to get a Root Shell
-The device implements a shell accessible over SSH or internal webserver. However, this is not a linux shell but has only limited application-related commands. We will now patch this shell to get a linux root shell. The device SW is based on Linux and the application is almost completely written in Python.
+The device implements a shell accessible over SSH or internal webserver. However, this is not a linux shell but has only limited application-related commands. We will now patch this shell to get a linux root shell. The device firmware is based on Linux and the application is almost completely written in Python.
 
 ### Patching the CPSHELL
 
