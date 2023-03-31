@@ -361,6 +361,8 @@ ubidettach ubi -m 1
 
 **Note about UBI**: Between the bare NAND FLash and the squashfs filesystem there is a layer in-between called [UBI](http://www.linux-mtd.infradead.org/doc/ubi.html), which takes care of the Flash block management. 
 
+If we `ssh` the device now and type `???` we get a root shell!
+
 ## Software Update Mechanism
 
 ## Man in the Middle 
