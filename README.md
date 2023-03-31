@@ -125,7 +125,12 @@ In the `/service_manager/` we find a file called `cpshell.pyc`. This implements 
                  'python':(
                   self.python, 'Internal Use Only')})
 ```
-And `superuser` is initilized to `false` :face_with_spiral_eyes:. We just need to change the first line to `if not self.superuser:`
+And:
+```
+        def sh(self):
+            self.fork_exec(lambda: os.execl('/bin/sh', 'sh'))
+```
+The variable `superuser` is initilized to `false` :face_with_spiral_eyes: We just need to change the branch condition...
 
 `decompyle3` is not able to deompile this file error-free, so that we can't just patch the `.py` file and recompile it. We have to patch the compiled python code `.pyc`.
 First we can disassemble the file with `pydisasm` (https://github.com/rocky/python-xdis).
