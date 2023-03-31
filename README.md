@@ -93,8 +93,44 @@ With `unsquashfs` we can extract all the files.
 The device implements a shell accessible over SSH or internal webserver. However, this is not a linux shell but has only limited application-related commands. We will now patch this shell to get a linux root shell. The device SW is based on Linux and the application is almost completely written in Python.
 
 Moreover, the application includes a feature that (re-)enables silent boot every time the application starts. We also need to patch this feature. In `/service_manager/services` we find a file called `silentboot.pyc`. Let's decompile this file with `decompyle3`:
+```
+import services, cp
+from services.utils.ubootenv import UbootEnv
+
+class SilentBoot(services.Service):
+
+    name = 'silentboot'
+    __startup__ = 100
+    __shutdown__ = 100
+
+    def onStart(self):
+        env = UbootEnv()
+        if env.read('silent') != 'yes':
+            env.write('silent', 'yes')
+        if env.read('bootdelay') != '1':
+            env.write('bootdelay', '1')
+
+if cp.platform == 'router':
+    services.register(SilentBoot)
+```
 
 We see that the u-boot `silent` variable is changed to `yes`. We can remove that:
+
+```
+import services, cp
+from services.utils.ubootenv import UbootEnv
+
+class SilentBoot(services.Service):
+    name = 'silentboot'
+    __startup__ = 100
+    __shutdown__ = 100
+
+    def onStart(self):
+        env = UbootEnv()
+
+if cp.platform == 'router':
+    services.register(SilentBoot)
+```
 
 Now we have to recompile the python source file in a `pyc` file and replace the original one. We can then re-build the squashfs image:
 
@@ -128,13 +164,75 @@ The image uses u-boot image format so we can use `mkimage` and `dumpimage`.
 First print info:
 
 ```
-
+mkimage -l kernelimage 
+FIT description: CPRELEASE COCONUT IBR600C 7.22.60
+Created:         Thu Nov 10 12:00:28 2022
+ Image 0 (kernel@1)
+  Description:  unavailable
+  Created:      Thu Nov 10 12:00:28 2022
+  Type:         Kernel Image
+  Compression:  gzip compressed
+  Data Size:    3153584 Bytes = 3079.67 KiB = 3.01 MiB
+  Architecture: ARM
+  OS:           Linux
+  Load Address: 0x80208000
+  Entry Point:  0x80208000
+  Hash algo:    crc32
+  Hash value:   fcca93bc
+  Hash algo:    sha1
+  Hash value:   5a4accc0eeeeafa42975e7d3943d784887f8ab78
+ Image 1 (fdt@1)
+  Description:  IBR600C device tree blob
+  Created:      Thu Nov 10 12:00:28 2022
+  Type:         Flat Device Tree
+  Compression:  uncompressed
+  Data Size:    20038 Bytes = 19.57 KiB = 0.02 MiB
+  Architecture: ARM
+  Hash algo:    crc32
+  Hash value:   cb529e98
+  Hash algo:    sha1
+  Hash value:   3a2f1a92f537c1e614fde30c3bce9738cc76a225
+ Default Configuration: 'config@5'
+ Configuration 0 (config@5)
+  Description:  Coconut
+  Kernel:       kernel@1
+  FDT:          fdt@1
 ```
 
 Then extract device tree and kernel:
 
 ```
+dumpimage -p 0 -o kernel.gz -T flat_dt kernelimage 
+Extracted:
+ Image 0 (kernel@1)
+  Description:  unavailable
+  Created:      Thu Nov 10 12:00:28 2022
+  Type:         Kernel Image
+  Compression:  gzip compressed
+  Data Size:    3153584 Bytes = 3079.67 KiB = 3.01 MiB
+  Architecture: ARM
+  OS:           Linux
+  Load Address: 0x80208000
+  Entry Point:  0x80208000
+  Hash algo:    crc32
+  Hash value:   fcca93bc
+  Hash algo:    sha1
+  Hash value:   5a4accc0eeeeafa42975e7d3943d784887f8ab78
 
+
+dumpimage -p 1 -o dt.dtb -T flat_dt kernelimage 
+Extracted:
+ Image 1 (fdt@1)
+  Description:  IBR600C device tree blob
+  Created:      Thu Nov 10 12:00:28 2022
+  Type:         Flat Device Tree
+  Compression:  uncompressed
+  Data Size:    20038 Bytes = 19.57 KiB = 0.02 MiB
+  Architecture: ARM
+  Hash algo:    crc32
+  Hash value:   cb529e98
+  Hash algo:    sha1
+  Hash value:   3a2f1a92f537c1e614fde30c3bce9738cc76a225
 ```
 
 We can now modify the kernel.gz binary with the ROOTFS information. The three last words of the kernel.gz file contain CRC, Length and 0x00000000 in little endian format. Note that these three words are not part of the compressed image, they are just added at the end.
@@ -159,7 +257,6 @@ First we need to decompile the device tree with `dtc`, and then we can build the
 dtc -I dtb -O dts dt.dtb -o dt.dts 
 mkimage -f image.its kernelimage
 ```
-
 Note: `image.its` is provided [here](./boot/image.its)
 
 
