@@ -117,7 +117,7 @@ The device firmware is based on Linux and the application is almost completely w
 
 ### Patching the CPSHELL
 
-In the `/service_manager/` we find a file called `cpshell.pyc`. This implements the reduced cradlepoint shell. If we `decompyle3` it we can find following interesting code:
+In the `/service_manager/` directory we find a file called `cpshell.pyc`. This implements the reduced cradlepoint shell. If we `decompyle3` it we can find following interesting code:
 ```
             if self.superuser:
                 self.cmds.update({'sh':(
@@ -151,13 +151,13 @@ import opcode
 for op in ['LOAD_FAST', 'LOAD_ATTR', 'EXTENDED_ARG', 'POP_JUMP_IF_FALSE']:
 print('%-16s%s' % (op, opcode.opmap[op].to_bytes(1,byteorder='little')))
 ```
-A bytecode instruction is (mostly) composed of the 8 bit opcode (8 bit) and a 8 bit parameter. In our case we can reconstruct following binary sequence:
+A bytecode instruction is (mostly) composed of the 8 bit opcode (8 bit) and a 8 bit variable. In our case we can reconstruct following binary sequence:
 ```
 0x7c 0x00 0x6a 0x0d 0x90 0x01 0x72
 ```
 There is only one match in the `cpshell.pyc` file.
 
-With `opcode` we can find that the opcaode for `POP_JUMP_IF_FALSE` is `0x73`, so that we just need to change `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x72` to `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x73`. Our cpshell is patched.
+With `opcode` we can find that the opcode for `POP_JUMP_IF_FALSE` is `0x73`, so that we just need to change `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x72` to `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x73`. Our cpshell is now patched.
 
 ### Pachting the automatic silent mode reenabling function
 
