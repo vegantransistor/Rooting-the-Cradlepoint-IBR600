@@ -97,7 +97,7 @@ First the raw data are extracted with the Saleae SPI decoder feature and transfo
 
 ![handshake](./pictures/handshake.png)
 
-A [second script](./scripts/extract_nand.py) removes the handshake. After that, remove all `0xFFFFFFFF` at the end of the file. We have now the root filesystem:
+A [second script](./scripts/extract_nand.py) removes the handshake. Then remove all `0xFFFFFFFF` at the end of the file. We have now the root filesystem:
 
 ```
 binwalk rootfs.cradl
