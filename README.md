@@ -21,7 +21,7 @@ At boot time, the UART interface only gives very limited information about the f
 ### NOR
 
 The NOR Flash is easy to dump with a [Bus Pirate](http://dangerousprototypes.com/docs/Bus_Pirate) and [Flashrom](https://www.flashrom.org/Flashrom). The content is not encrypted and secure boot is not in place. 
-Steps to dump the NOR Flash:
+Here are the steps to dump the NOR Flash:
 1. Connect the Bus Pirate SPI interface to the NOR Flash located on the backside of the PCB:
 
 ***TODO:PIC of NOR with Pinout***
