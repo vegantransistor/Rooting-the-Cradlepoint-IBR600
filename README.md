@@ -324,6 +324,7 @@ How to flash the NAND Flash:
 ubiattach -b 1 -m 1
 ```
 Now you shall see the three ubi volumes `/dev/ubi0_0` (kernel), `/dev/ubi0_1` (rootfs) and `/dev/ubi0_2` (empty, used as buffer).
+
 3. Wipe out the first partition (partition 0), which contains the kernel image.
 ```
 ubiupdatevol /dev/ubi0_0 -t
