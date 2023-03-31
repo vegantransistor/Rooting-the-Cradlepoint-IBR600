@@ -12,7 +12,7 @@ The IBR600C is an LTE Modem & Router with Wifi, LAN and WAN Interfaces. It has a
 
 I could not resist to open it and see if I could get some information about the boot process and eventually the firmware. The main processor is a Qualcomm IPQ4019 with SDRAM, NOR and NAND Flash. A UART interface is accessible:
 
-**PIC: UART PINS**
+***TODO:PIC with UART PINS***
 
 At boot time, the UART interface only gives very limited information about the first bootloader, after that it becomes silent, so let's have a look inside the Flash memories. NOR and NAND Flash is a typical combination - bootloaders in NOR, OS and Application in NAND. Both flashes are connected via the same SPI bus to the processor. NAND Flashes are not easy to dump because of the bad blocks and error management. Here is a picture of the device opened with logic analyser, serial interface and bus pirate connected:
 
