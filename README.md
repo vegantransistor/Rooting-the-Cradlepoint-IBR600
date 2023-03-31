@@ -27,7 +27,7 @@ Steps to dump the NOR Flash:
 ***TODO:PIC of NOR with Pinout***
 
 2. Put the main processor in `RESET` state. This is needed because we cannot have two SPI masters. 
-3. Dump the flash with flashrom (change with your serial interface):
+3. Dump the flash with flashrom (change with your serial interface name):
 ```
 flashrom -V -p buspirate_spi:dev=/dev/tty.usbserial-AG0JGQV3,serialspeed=230400 -n -r nor_dump.bin
 ```
@@ -35,7 +35,7 @@ flashrom -V -p buspirate_spi:dev=/dev/tty.usbserial-AG0JGQV3,serialspeed=230400 
 The u-boot environmental variables are a good starting point: in our case, a `SILENT` variable is set to `YES`:
 > silent=yes
 
-We can change it to `NO`.
+We can change it to `no`.
 **Caveat**: a CRC32 of the whole NOR Flash block (65536 bytes) protects the integrity of the u-boot bootenv. It is placed at the very beginning of the flash block. we need to recalculate the CRC32 on the flash block, CRC32 excluded (65536-4 bytes) and put it at the beginning of the block.
 
 Now reflash the NOR device:
@@ -93,7 +93,7 @@ NAND Flash dump is complicated to dump, I recorded the SPI interface during the 
 
 ![ROOTFS](./pictures/rootfs.png)
 
-First the raw data are extracted with the Saleae SPI decoder feature and transformed in binary format with a [python script](./scripts/make_bin.py). However, the raw data still contain some handshake informationas we see on the waveform:
+First the raw data are extracted with the Saleae SPI decoder feature and transformed in binary format with a [python script](./scripts/make_bin.py). However, the raw data still contain some handshake information, see the waveform:
 
 ![handshake](./pictures/handshake.png)
 
@@ -115,7 +115,7 @@ The device implements a shell accessible over SSH or internal webserver. However
 
 ***TODO: Python CPSHELL PATCH***
 
-### Pachting the autoomatic silent mode reenabling
+### Pachting the automatic silent mode reenabling function
 
 The application includes a feature that (re-)enables silent boot every time the application starts. We also need to patch this feature. In `/service_manager/services` we find a file called `silentboot.pyc`. Let's decompile this file with `decompyle3`:
 
