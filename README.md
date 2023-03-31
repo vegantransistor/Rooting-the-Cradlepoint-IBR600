@@ -363,6 +363,8 @@ ubidettach ubi -m 1
 
 ## Man in the Middle 
 
-## Discosure
+## Firmware Emulation with QEMU
+
+## Disclosure
 
 We disclosed our findings to Cradlepoint on 2023-01-05.
