@@ -89,7 +89,7 @@ At this point, it will be possible to load some live image (SDRAM) in the device
 
 ### NAND 
 
-NAND Flash dump is complicated to dump, I recorded the SPI interface during the boot phase with the [SALEAE](https://www.saleae.com/) logic analyzer. There are two big activity blocks corresponding to the Linux Kernel (first) and the Root Filesystem. Here is the rootfs:
+NAND Flash dump is complicated to dump, I recorded the SPI interface during the boot phase with the [saleae](https://www.saleae.com/) logic analyzer. There are two big activity blocks corresponding to the Linux Kernel (first) and the Root Filesystem. Here is the rootfs:
 
 ![ROOTFS](./pictures/rootfs.png)
 
@@ -151,17 +151,17 @@ import opcode
 for op in ['LOAD_FAST', 'LOAD_ATTR', 'EXTENDED_ARG', 'POP_JUMP_IF_FALSE']:
 print('%-16s%s' % (op, opcode.opmap[op].to_bytes(1,byteorder='little')))
 ```
-A bytecode instruction is (mostly) composed of the 8 bit opcode (8 bit) and a 8 bit variable. In our case we can reconstruct following binary sequence:
+A bytecode instruction is (mostly) composed of the 8 bit opcode and a 8 bit variable. In our case we can reconstruct following binary sequence:
 ```
 0x7c 0x00 0x6a 0x0d 0x90 0x01 0x72
 ```
 There is only one match in the `cpshell.pyc` file.
 
-With `opcode` we can find that the opcode for `POP_JUMP_IF_FALSE` is `0x73`, so that we just need to change `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x72` to `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x73`. Our cpshell is now patched.
+With `opcode` we can find that the opcode for `POP_JUMP_IF_FALSE` is `0x73`, so that we just need to change `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x72` to `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x73`. The cpshell is now patched.
 
 ### Pachting the automatic silent mode reenabling function
 
-The application includes a feature that (re-)enables silent boot every time the application starts. We also need to patch this feature. In `/service_manager/services` we find a file called `silentboot.pyc`. Let's decompile this file with `decompyle3`:
+The application includes a feature that (re-)enables silent boot every time the application starts. We also need to patch this feature. In `/service_manager/services` we find a file called `silentboot.pyc`. Let's decompile this file with `decompyle3` (error-free):
 
 ```
 import services, cp
