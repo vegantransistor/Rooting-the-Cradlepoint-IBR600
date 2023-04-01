@@ -231,7 +231,7 @@ The raw kernel image dumped from flash contains:
 * ROOTFS parameters (crc and length) located at the end of the gzip kernel binary
 * Device Tree
 
-The image uses u-boot image format so we can use `mkimage` and `dumpimage`. 
+The image uses u-boot format so we can use `mkimage` and `dumpimage`. 
 
 First we can print some info:
 
