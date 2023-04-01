@@ -337,7 +337,7 @@ Connect your host pc to the Cradlepoint device with:
 
 Set up a TFTP server on the host computer with `IP = 192.168.0.200` and put the image `wnc-fit-uImage_v005.itb` (do not rename, provided [here](./boot/wnc-fit-uImage_v005.itb)) in the TFTP directory. This image contains the modified kernel and rootfs from openWRT. 
 
-Boot the Cradlepoint with modified NOR FLash (silent mode disabled), so that Uboot messages are displayed. Then press 1 to load image via TFTP (9 seconds break). 
+Boot the Cradlepoint with modified NOR FLash (silent mode disabled), so that Uboot messages are displayed. Then press 1 to load image via TFTP. 
 Note that the TFTP Server IP can be changed by modifying the u-boot variable `serverip` and using `saveenv`.
 Cradlepoint will TFTP the file, unpack it and start the kernel. Now we have a root shell on the serial interface:
 ```
