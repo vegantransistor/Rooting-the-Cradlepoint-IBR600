@@ -132,7 +132,7 @@ And:
 ```
 The variable `superuser` is initilized to `false` :face_with_spiral_eyes: We just need to change the branch condition...
 
-`decompyle3` is not able to deompile this file error-free, so that we can't just patch the `.py` file and recompile it. We have to patch the compiled python code `.pyc`.
+`decompyle3` is not able to decompile this file error-free, so that we can't just patch the `.py` file and recompile it. We have to patch the compiled python code `.pyc`.
 First we can disassemble the file with `pydisasm` (https://github.com/rocky/python-xdis).
 ```
 pydisasm --format xasm cpshell.pyc > cpshell.pyasm
