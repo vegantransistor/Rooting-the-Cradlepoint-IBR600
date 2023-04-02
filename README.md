@@ -85,7 +85,7 @@ Please choose the operation:
  9 ... 0 
 ```
 
-At this point, it is possible to load some live image (SDRAM) in the device via TFTP.
+At this point, it is possible to load some live image in the device SDRAM via TFTP.
 
 ### NAND 
 
@@ -97,7 +97,7 @@ First the raw data are extracted with the Saleae SPI decoder feature and transfo
 
 ![handshake](./pictures/handshake.png)
 
-A [second script](./scripts/extract_nand.py) removes the handshake. Then all `0xFFFFFFFF` at the end of the file are removed. We have now the root filesystem:
+A [second script](./scripts/extract_nand.py) removes the handshakes. Then all `0xFFFFFFFF` at the end of the file are removed. We have now the root filesystem:
 
 ```
 binwalk rootfs.cradl
@@ -111,13 +111,13 @@ With `unsquashfs` all the files can be extracted.
 With the same process the kernel image can be extracted.
 
 ## Patch the Firmware to get a Root Shell
-The device implements a shell accessible over SSH or internal webserver. However, this is not a linux shell, it has only limited application-related commands. We will now patch this shell to get a linux root shell. 
+The device implements a shell accessible over SSH or internal webserver. However, this is not a linux shell, it has only limited application-related commands. We are now going to patch this shell to get a linux root shell. 
 
 The device firmware is based on Linux and the application is almost completely written in Python.
 
 ### Patching the CPSHELL
 
-In the `/service_manager/` directory there is a file called `cpshell.pyc`. This implements the reduced cradlepoint shell. If we `decompyle3` (https://pypi.org/project/decompyle3/) it we can find following interesting code blocks:
+In the `/service_manager/` directory there is a python bytecode file called `cpshell.pyc`. It implements the reduced cradlepoint shell. If we decompile it with `decompyle3` (https://pypi.org/project/decompyle3/), we can find following interesting code blocks:
 ```
             if self.superuser:
                 self.cmds.update({'sh':(
@@ -133,6 +133,7 @@ And:
 The variable `superuser` is initialized to `false` :face_with_spiral_eyes: We just need to change the branch condition...
 
 `decompyle3` is not able to decompile this file error-free, so that we can't just patch the `.py` file and recompile it. We have to patch the compiled python code `.pyc`.
+
 First we can disassemble the file with `pydisasm` (https://github.com/rocky/python-xdis).
 ```
 pydisasm --format xasm cpshell.pyc > cpshell.pyasm
@@ -145,7 +146,7 @@ Then we search for the variable `superuser` and branches associated to this vari
             EXTENDED_ARG         1 (256)
             POP_JUMP_IF_FALSE    L500 (to 500)
 ```
-We need to find the position of this `POP_JUMP_IF_FALSE` branch in the compiled python file and replace it with `POP_JUMP_IF_TRUE`. With following code we can print out the opcodes related to the assembly code above:
+We need to find the position of this `POP_JUMP_IF_FALSE` branch in the compiled python file and replace it with `POP_JUMP_IF_TRUE`. With following instructions we can print out the opcodes related to the assembly code above:
 ```
 import opcode
 for op in ['LOAD_FAST', 'LOAD_ATTR', 'EXTENDED_ARG', 'POP_JUMP_IF_FALSE']:
@@ -157,11 +158,11 @@ A bytecode instruction is (mostly) composed of the 8 bit opcode and a 8 bit vari
 ```
 There is only one match in the `cpshell.pyc` file.
 
-With `opcode` we can find that the opcode for `POP_JUMP_IF_FALSE` is `0x73`, so that we just need to change `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x72` to `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x73`. The cpshell is now patched.
+With `opcode` we can find the opcode for `POP_JUMP_IF_FALSE` -- `0x73`, so that we just need to change `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x72` into `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x73`. The cpshell is now patched.
 
 ### Pachting the automatic silent mode re-enabling function
 
-The application includes a feature that (re-)enables silent boot every time the application starts. We also need to patch this feature. In `/service_manager/services` we find a file called `silentboot.pyc`. Let's decompile this file with `decompyle3` (this time error-free):
+The application includes a feature that (re-)enables silent boot every time it starts. We also need to patch this feature. In `/service_manager/services` we find a file called `silentboot.pyc`. Let's decompile this file with `decompyle3` (this time error-free):
 
 ```
 import services, cp
@@ -313,14 +314,14 @@ First we calculate the CRC of the ROOTFS image:
 ```
 crc32 rootfsimage
 ```
-Note the length of the rootfs image in bytes, convert in hex:
+Note the length of the rootfs image in bytes, convert it in hex:
 > E.g. 19034112 bytes, or 0x01227000 bytes
 
 We open kernel.gz in a hex editor, change the CRC and length. For example (last three bytes):
 * Original (CRC32 - Length - 0x0):
 > 0xB4D11088 0x00733302 0x00000000
 * Changed :
-> 0x67452301 0x00702201 0x00000000
+> 0x67452301 0x01227000 0x00000000
 
 Now we can re-build the KERNEL image:
 
@@ -412,4 +413,4 @@ If we `ssh` the device and type `sh` we get a root shell:
 
 ## Disclosure
 
-We disclosed our findings to Cradlepoint on 2023-01-05.
+These findings have been disclosed to Cradlepoint on 2023-01-05.
