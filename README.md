@@ -25,7 +25,7 @@ The combination of NOR and NAND Flash is standard: bootloaders in NOR, OS and Ap
 The NOR Flash is easy to dump with a [Bus Pirate](http://dangerousprototypes.com/docs/Bus_Pirate) and [Flashrom](https://www.flashrom.org/Flashrom). The content is not encrypted and secure boot is not in place. 
 Here are the steps to dump the NOR Flash:
 1. Connect the Bus Pirate SPI interface to the NOR Flash located on the backside of the PCB:
-2. Put the main processor in `RESET` state. This is needed because we cannot have two SPI masters. 
+2. Put the main processor in `RESET` state. This is needed because we can't have two SPI masters. 
 3. Power the device and dump the flash with flashrom (change the serial interface name):
 ```
 flashrom -V -p buspirate_spi:dev=/dev/tty.usbserial-AG0JGQV3,serialspeed=230400 -n -r nor_dump.bin
