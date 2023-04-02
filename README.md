@@ -160,7 +160,7 @@ There is only one match in the `cpshell.pyc` file.
 
 With `opcode` we can find the opcode for `POP_JUMP_IF_FALSE` -- `0x73`, so that we just need to change `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x72` into `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x73`. The cpshell is now patched.
 
-### Pachting the automatic silent mode re-enabling function
+### Patching the automatic silent mode re-enabling function
 
 The application includes a feature that (re-)enables silent boot every time it starts. We also need to patch this feature. In `/service_manager/services` we find a file called `silentboot.pyc`. Let's decompile this file with `decompyle3` (this time error-free):
 
