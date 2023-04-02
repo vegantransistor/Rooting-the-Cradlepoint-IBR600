@@ -90,7 +90,7 @@ At this point, it is possible to load some live image (SDRAM) in the device via 
 
 ### NAND 
 
-NAND Flash dump is complicated to dump. I recorded the SPI interface activity during the boot phase with the [saleae](https://www.saleae.com/) logic analyzer. There are two big activity blocks corresponding to the Linux Kernel (first) and the Root Filesystem. Here is the recoding of ROOTFS:
+NAND Flash dump is complicated to dump. I recorded the SPI interface activity during the boot phase with the [saleae](https://www.saleae.com/) logic analyzer. There are two big activity blocks corresponding to the Linux Kernel (first) and the Root Filesystem. Here is the recording of ROOTFS:
 
 ![ROOTFS](./pictures/rootfs.png)
 
@@ -98,7 +98,7 @@ First the raw data are extracted with the Saleae SPI decoder feature and transfo
 
 ![handshake](./pictures/handshake.png)
 
-A [second script](./scripts/extract_nand.py) removes the handshake. Then all `0xFFFFFFFF` at the end of the file are rmoved. We have now the root filesystem:
+A [second script](./scripts/extract_nand.py) removes the handshake. Then all `0xFFFFFFFF` at the end of the file are removed. We have now the root filesystem:
 
 ```
 binwalk rootfs.cradl
@@ -131,7 +131,7 @@ And:
         def sh(self):
             self.fork_exec(lambda: os.execl('/bin/sh', 'sh'))
 ```
-The variable `superuser` is initilized to `false` :face_with_spiral_eyes: We just need to change the branch condition...
+The variable `superuser` is initialized to `false` :face_with_spiral_eyes: We just need to change the branch condition...
 
 `decompyle3` is not able to decompile this file error-free, so that we can't just patch the `.py` file and recompile it. We have to patch the compiled python code `.pyc`.
 First we can disassemble the file with `pydisasm` (https://github.com/rocky/python-xdis).
@@ -146,7 +146,7 @@ Then we search for the variable `superuser` and branches associated to this vari
             EXTENDED_ARG         1 (256)
             POP_JUMP_IF_FALSE    L500 (to 500)
 ```
-We need to find the position of this `POP_JUMP_IF_FALSE` branch in the compiled python file and replce it with `POP_JUMP_IF_TRUE`. With following code we can print out the opcodes related to the assembly code above:
+We need to find the position of this `POP_JUMP_IF_FALSE` branch in the compiled python file and replace it with `POP_JUMP_IF_TRUE`. With following code we can print out the opcodes related to the assembly code above:
 ```
 import opcode
 for op in ['LOAD_FAST', 'LOAD_ATTR', 'EXTENDED_ARG', 'POP_JUMP_IF_FALSE']:
@@ -160,7 +160,7 @@ There is only one match in the `cpshell.pyc` file.
 
 With `opcode` we can find that the opcode for `POP_JUMP_IF_FALSE` is `0x73`, so that we just need to change `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x72` to `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x73`. The cpshell is now patched.
 
-### Pachting the automatic silent mode reenabling function
+### Pachting the automatic silent mode re-enabling function
 
 The application includes a feature that (re-)enables silent boot every time the application starts. We also need to patch this feature. In `/service_manager/services` we find a file called `silentboot.pyc`. Let's decompile this file with `decompyle3` (this time error-free):
 
@@ -334,7 +334,7 @@ Note: `image.its` is provided [here](./boot/image.its)
 
 Connect your host pc to the Cradlepoint device with: 
 1. a serial terminal 8n1,115200 
-2. an ethernet cable connected to the LAN (***TODO:CHECK!!! or WAN???***) port
+2. an Ethernet cable connected to the LAN (***TODO:CHECK!!! or WAN???***) port
 
 Set up a TFTP server on the host computer with `IP = 192.168.0.200` and put the image `wnc-fit-uImage_v005.itb` (do not rename, provided [here](./boot/wnc-fit-uImage_v005.itb)) in the TFTP directory. This image contains the modified kernel and rootfs from openWRT. 
 
@@ -363,7 +363,7 @@ with `ssh root@192.168.1.1`.
 
 How to flash the NAND Flash:
 
-1. `scp` the new rootfsimage and kernelimage to the `/tmp/` directory of the Cradlepoint device (reminder: everything is in SDRAM with the openWRT live image).
+1. `scp` the new rootfs image and kernel image to the `/tmp/` directory of the Cradlepoint device (reminder: everything is in SDRAM while running the openWRT live image).
 2. Attach the NAND Flash partition containing KERNEL and ROOTFS called `/dev/mtd1`:
 ```
 ubiattach -b 1 -m 1
@@ -399,13 +399,13 @@ ubirsvol /dev/ubi0 -n 2 -s [nb of bytes calculated to have enough place for ubi0
 ```
 ubiupdatevol /dev/ubi0_1 /tmp/rootfsimage
 ```
-10. Dettach the ubi partition
+10. Detach the ubi partition
 ```
 ubidettach ubi -m 1
 ```
 11. Reboot. The device shall boot with the new rootfs without CRC error.
  
-**Note about UBI**: Between the bare NAND FLash and the squashfs filesystem there is a layer called [UBI](http://www.linux-mtd.infradead.org/doc/ubi.html), which takes care among other things of the Flash block management. 
+**Note about UBI**: Between the bare NAND FLash and the squashfs filesystem there is a layer called [UBI](http://www.linux-mtd.infradead.org/doc/ubi.html), which takes care of the flash management. 
 
 If we `ssh` the device and type `sh` we get a root shell:
 
