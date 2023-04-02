@@ -32,7 +32,7 @@ Here are the steps to dump the NOR Flash:
 flashrom -V -p buspirate_spi:dev=/dev/tty.usbserial-AG0JGQV3,serialspeed=230400 -n -r nor_dump.bin
 ```
 
-The u-boot environmental variables, part of the flash dump, are a good starting point: in our case, a `silent` variable is present:
+The u-boot environmental variables, part of the flash dump, are a good starting point. In our case, a `silent` variable is present:
 > silent=yes
 
 We can change it to `no`.
