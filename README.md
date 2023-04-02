@@ -389,7 +389,7 @@ ubirsvol /dev/ubi0 -n 1 -s [nb of bytes of the new rootfs image]
 ```
 ubi_resize_volume: not enough PEBs: requested 4, available 0
 ```
-Use ubinfo to display the size of the image and partitions. Note that the third partition does not contain any data so it can be resized.
+Use ubinfo to display the size of the image and partitions. Note that the third partition does not contain any data so it can be resized:
 ```
 ubirsvol /dev/ubi0 -n 2 -s [nb of bytes calculated to have enough place for ubi0_1]
 ```
