@@ -14,7 +14,9 @@ I could not resist to open it and see if I could get some information about the 
 
 ***TODO:PIC with UART PINS***
 
-At boot time, the UART interface only gives very limited information about the first bootloader, after that it becomes silent. Regarding Flash memories, NOR and NAND Flash is a typical combination: bootloaders in NOR, OS and Application in NAND. Both flashes are connected via the same SPI bus to the processor. NAND Flashes are not easy to dump because of the bad blocks and error management. Here is a picture of the device opened with logic analyzer, serial interface and bus pirate connected:
+At boot time, the UART interface only gives very limited information about the first bootloader, after that it becomes silent. 
+
+The combination of NOR and NAND Flash is standard: bootloaders in NOR, OS and Application in NAND. Both flashes are connected via the same SPI bus to the processor. NAND Flashes are not easy to dump because of the bad blocks and error management. Here is a picture of the device opened with logic analyzer, serial interface and bus pirate connected:
 
 ![opened](./pictures/opened.png)
 
@@ -37,13 +39,13 @@ The u-boot environmental variables, part of the flash dump, are a good starting 
 
 We can change it to `no`.
 
-**Caveat**: a CRC32 of the whole NOR Flash block (65536 bytes) protects the integrity of the u-boot bootenv. It is placed at the very beginning of the flash block. We need to recalculate the CRC32 on the flash block, CRC32 excluded (65536-4 bytes) and put it at the beginning of the block. The patched NOR Flash block containing the u-boot environmental variables is provided [here](./boot/nor_block_ubootenv_nosilent.bin).
+**Caveat**: a CRC32 of the whole NOR Flash block (65536 bytes) protects the integrity of the u-boot bootenv. It is placed at the very beginning of the flash block. We need to recalculate the CRC32 of the flash block, CRC32 excluded (65536-4 bytes) and put it at the beginning of the block. The patched NOR Flash block containing the u-boot environmental variables is provided [here](./boot/nor_block_ubootenv_nosilent.bin).
 
 Now we can reflash the NOR device:
 ```
 flashrom -V -p buspirate_spi:dev=/dev/tty.usbserial-AG0JGQV3,serialspeed=230400 -n -w nor_dump_nosilent.bin
 ```
-During next boot, we now have a u-boot console (!):
+During next boot, we have a u-boot console (!):
 
 ```
 U-Boot 2012.07 [Trail Mix GARNET v9.40,local] (Jan 04 2018 - 11:42:32)
