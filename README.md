@@ -42,7 +42,7 @@ Now we can reflash the NOR device:
 ```
 flashrom -V -p buspirate_spi:dev=/dev/tty.usbserial-AG0JGQV3,serialspeed=230400 -n -w nor_dump_nosilent.bin
 ```
-During next boot, we have a u-boot console 😂::
+During next boot, we have a u-boot console 😂:
 
 ```
 U-Boot 2012.07 [Trail Mix GARNET v9.40,local] (Jan 04 2018 - 11:42:32)
