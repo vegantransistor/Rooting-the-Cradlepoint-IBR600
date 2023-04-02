@@ -26,7 +26,7 @@ The NOR Flash is easy to dump with a [Bus Pirate](http://dangerousprototypes.com
 Here are the steps to dump the NOR Flash:
 1. Connect the Bus Pirate SPI interface to the NOR Flash located on the backside of the PCB:
 2. Put the main processor in `RESET` state. This is needed because we cannot have two SPI masters. 
-3. Power the device and dump the flash with flashrom (change with your serial interface name):
+3. Power the device and dump the flash with flashrom (change the serial interface name):
 ```
 flashrom -V -p buspirate_spi:dev=/dev/tty.usbserial-AG0JGQV3,serialspeed=230400 -n -r nor_dump.bin
 ```
