@@ -1,20 +1,20 @@
 # Rooting the Cradlepoint IBR600C
 
-This is a description of the work I did with [stulle123](https://github.com/stulle123) Q4 2022 on the Cradlepoint IBR600C-150M-B-EU with FW Version 7.22.60.
+This is a description of the work I did with [stulle123](https://github.com/stulle123) during Q4 2022 on the Cradlepoint IBR600C-150M-B-EU with FW Version 7.22.60.
 
 ## IBR600C Flashdump
 
-It was a sunny day in September 2022 when someone put this device on my desk.
+It was a sunny :sunny: day in September 2022 when someone put this device on my desk.
 
 ![crad](./pictures/crad.png)
 
-The IBR600C is an LTE Modem & Router with Wifi, LAN and WAN Interfaces. It has an embedded webserver and cloud connectivity to the Cradlepoint Netcloud. 
+The IBR600C is a LTE Modem & Router with Wifi, LAN and WAN Interfaces. It has an embedded webserver and cloud connectivity to the [Cradlepoint Netcloud](https://accounts.cradlepointecm.com/). 
 
 I could not resist to open it and see if I could get some information about the boot process and eventually the firmware. The main processor is a Qualcomm IPQ4019 with SDRAM, NOR and NAND Flash. A UART interface is accessible:
 
 ***TODO:PIC with UART PINS***
 
-At boot time, the UART interface only gives very limited information about the first bootloader, after that it becomes silent, so let's have a look inside the Flash memories. NOR and NAND Flash is a typical combination - bootloaders in NOR, OS and Application in NAND. Both flashes are connected via the same SPI bus to the processor. NAND Flashes are not easy to dump because of the bad blocks and error management. Here is a picture of the device opened with logic analyzer, serial interface and bus pirate connected:
+At boot time, the UART interface only gives very limited information about the first bootloader, after that it becomes silent. Regarding Flash memories, NOR and NAND Flash is a typical combination: bootloaders in NOR, OS and Application in NAND. Both flashes are connected via the same SPI bus to the processor. NAND Flashes are not easy to dump because of the bad blocks and error management. Here is a picture of the device opened with logic analyzer, serial interface and bus pirate connected:
 
 ![opened](./pictures/opened.png)
 
@@ -27,22 +27,23 @@ Here are the steps to dump the NOR Flash:
 ***TODO:PIC of NOR with Pinout***
 
 2. Put the main processor in `RESET` state. This is needed because we cannot have two SPI masters. 
-3. Dump the flash with flashrom (change with your serial interface name):
+3. Power the device and dump the flash with flashrom (change with your serial interface name):
 ```
 flashrom -V -p buspirate_spi:dev=/dev/tty.usbserial-AG0JGQV3,serialspeed=230400 -n -r nor_dump.bin
 ```
 
-The u-boot environmental variables are a good starting point: in our case, a `SILENT` variable is set to `YES`:
+The u-boot environmental variables, part of the flash dump, are a good starting point: in our case, a `silent` variable is present:
 > silent=yes
 
 We can change it to `no`.
-**Caveat**: a CRC32 of the whole NOR Flash block (65536 bytes) protects the integrity of the u-boot bootenv. It is placed at the very beginning of the flash block. we need to recalculate the CRC32 on the flash block, CRC32 excluded (65536-4 bytes) and put it at the beginning of the block. The patched NOR Flash block containing the u-boot environmental variables is provided [here](./boot/nor_block_ubootenv_nosilent.bin).
 
-Now reflash the NOR device:
+**Caveat**: a CRC32 of the whole NOR Flash block (65536 bytes) protects the integrity of the u-boot bootenv. It is placed at the very beginning of the flash block. We need to recalculate the CRC32 on the flash block, CRC32 excluded (65536-4 bytes) and put it at the beginning of the block. The patched NOR Flash block containing the u-boot environmental variables is provided [here](./boot/nor_block_ubootenv_nosilent.bin).
+
+Now we can reflash the NOR device:
 ```
 flashrom -V -p buspirate_spi:dev=/dev/tty.usbserial-AG0JGQV3,serialspeed=230400 -n -w nor_dump_nosilent.bin
 ```
-Boot the device, we now have a u-boot console (!):
+During next boot, we now have a u-boot console (!):
 
 ```
 U-Boot 2012.07 [Trail Mix GARNET v9.40,local] (Jan 04 2018 - 11:42:32)
@@ -85,11 +86,11 @@ Please choose the operation:
  9 ... 0 
 ```
 
-At this point, it will be possible to load some live image (SDRAM) in the device via TFTP.
+At this point, it is possible to load some live image (SDRAM) in the device via TFTP.
 
 ### NAND 
 
-NAND Flash dump is complicated to dump, I recorded the SPI interface during the boot phase with the [saleae](https://www.saleae.com/) logic analyzer. There are two big activity blocks corresponding to the Linux Kernel (first) and the Root Filesystem. Here is the rootfs:
+NAND Flash dump is complicated to dump. I recorded the SPI interface activity during the boot phase with the [saleae](https://www.saleae.com/) logic analyzer. There are two big activity blocks corresponding to the Linux Kernel (first) and the Root Filesystem. Here is the recoding of ROOTFS:
 
 ![ROOTFS](./pictures/rootfs.png)
 
@@ -97,7 +98,7 @@ First the raw data are extracted with the Saleae SPI decoder feature and transfo
 
 ![handshake](./pictures/handshake.png)
 
-A [second script](./scripts/extract_nand.py) removes the handshake. Then remove all `0xFFFFFFFF` at the end of the file. We have now the root filesystem:
+A [second script](./scripts/extract_nand.py) removes the handshake. Then all `0xFFFFFFFF` at the end of the file are rmoved. We have now the root filesystem:
 
 ```
 binwalk rootfs.cradl
@@ -106,9 +107,9 @@ DECIMAL       HEXADECIMAL     DESCRIPTION
 0             0x0             Squashfs filesystem, little endian, version 4.0, compression:xz, size: 18464354 bytes, 2026 inodes, blocksize: 262144 bytes, created: 2022-06-02 18:01:34
 ```
 
-With `unsquashfs` we can extract all the files.
+With `unsquashfs` all the files can be extracted.
 
-With the same process we can extract the kernel image.
+With the same process the kernel image can be extracted.
 
 ## Patch the Firmware to get a Root Shell
 The device implements a shell accessible over SSH or internal webserver. However, this is not a linux shell, it has only limited application-related commands. We will now patch this shell to get a linux root shell. 
@@ -117,7 +118,7 @@ The device firmware is based on Linux and the application is almost completely w
 
 ### Patching the CPSHELL
 
-In the `/service_manager/` directory we find a file called `cpshell.pyc`. This implements the reduced cradlepoint shell. If we `decompyle3` it we can find following interesting code:
+In the `/service_manager/` directory there is a file called `cpshell.pyc`. This implements the reduced cradlepoint shell. If we `decompyle3` (https://pypi.org/project/decompyle3/) it we can find following interesting code blocks:
 ```
             if self.superuser:
                 self.cmds.update({'sh':(
@@ -145,7 +146,7 @@ Then we search for the variable `superuser` and branches associated to this vari
             EXTENDED_ARG         1 (256)
             POP_JUMP_IF_FALSE    L500 (to 500)
 ```
-We need to find the position of this `POP_JUMP_IF_FALSE` branch in the compiled python file and replce it with `POP_JUMP_IF_TRUE`. With following code we can print the opcodes related to the assembly code above:
+We need to find the position of this `POP_JUMP_IF_FALSE` branch in the compiled python file and replce it with `POP_JUMP_IF_TRUE`. With following code we can print out the opcodes related to the assembly code above:
 ```
 import opcode
 for op in ['LOAD_FAST', 'LOAD_ATTR', 'EXTENDED_ARG', 'POP_JUMP_IF_FALSE']:
@@ -161,7 +162,7 @@ With `opcode` we can find that the opcode for `POP_JUMP_IF_FALSE` is `0x73`, so 
 
 ### Pachting the automatic silent mode reenabling function
 
-The application includes a feature that (re-)enables silent boot every time the application starts. We also need to patch this feature. In `/service_manager/services` we find a file called `silentboot.pyc`. Let's decompile this file with `decompyle3` (error-free):
+The application includes a feature that (re-)enables silent boot every time the application starts. We also need to patch this feature. In `/service_manager/services` we find a file called `silentboot.pyc`. Let's decompile this file with `decompyle3` (this time error-free):
 
 ```
 import services, cp
@@ -219,7 +220,7 @@ In the next chapter we will see how to flash the squashfs image in NAND Flash.
 To test our patched firmware we now need to flash it back in the NAND Flash. These are the steps:
 1. Boot the device with silent mode **disabled** (with buspirate and flashrom, don't forget the CRC)
 2. Interrupt u-boot via serial interface and get a u-boot console
-3. Use TFTP Boot to boot a live image containing kernel+rootfs from openWRT with prompt and root shell
+3. Use TFTP Boot to boot a live image containing KERNEL + ROOTFS from openWRT with prompt and root shell
 4. Use the UBI commands to erase and flash the NAND Flash KERNEL and ROOTFS partitions
 
 **Caveat**: even if only ROOTFS is changed, it is necessary to update the KERNEL too. 
@@ -228,12 +229,12 @@ To test our patched firmware we now need to flash it back in the NAND Flash. The
 
 The raw kernel image dumped from flash contains:
 * Linux Kernel in gzip format 
-* ROOTFS parameters (crc and length) located at the end of the gzip kernel binary
+* ROOTFS parameters (CRC32 and length) located at the end of the gzip kernel binary
 * Device Tree
 
 The image uses u-boot format so we can use `mkimage` and `dumpimage`. 
 
-First we can print some info:
+First we can print out some info:
 
 ```
 mkimage -l kernelimage 
@@ -271,7 +272,7 @@ Created:         Thu Nov 10 12:00:28 2022
   FDT:          fdt@1
 ```
 
-Then extract device tree and kernel:
+Then we extract device tree and kernel:
 
 ```
 dumpimage -p 0 -o kernel.gz -T flat_dt kernelimage 
@@ -307,17 +308,17 @@ Extracted:
   Hash value:   3a2f1a92f537c1e614fde30c3bce9738cc76a225
 ```
 
-We can now modify the kernel.gz binary with the ROOTFS information. The three last words of the kernel.gz file contain CRC, Length and 0x00000000 in little endian format. Note that these three words are not part of the compressed image, they are just added at the end.
+We can now modify the kernel.gz binary with the new ROOTFS information. The three last words of the kernel.gz file contain ROOTFS CRC, ROOTFS Length and 0x00000000, in little endian format. Note that these three words are not part of the compressed image, they are just appended at the end.
 
-First calculate the CRC of the ROOTFS image:
+First we calculate the CRC of the ROOTFS image:
 ```
 crc32 rootfsimage
 ```
 Note the length of the rootfs image in bytes, convert in hex:
 > E.g. 19034112 bytes, or 0x01227000 bytes
 
-Open kernel.gz in a hex editor, change the CRC and length. For example (last three bytes):
-* Original (CRC - Length - 0x0):
+We open kernel.gz in a hex editor, change the CRC and length. For example (last three bytes):
+* Original (CRC32 - Length - 0x0):
 > 0xB4D11088 0x00733302 0x00000000
 * Changed :
 > 0x67452301 0x00702201 0x00000000
@@ -333,7 +334,7 @@ Note: `image.its` is provided [here](./boot/image.its)
 
 Connect your host pc to the Cradlepoint device with: 
 1. a serial terminal 8n1,115200 
-2. an ethernet cable connected to the LAN (***TODO:CHECK!!!***) port
+2. an ethernet cable connected to the LAN (***TODO:CHECK!!! or WAN???***) port
 
 Set up a TFTP server on the host computer with `IP = 192.168.0.200` and put the image `wnc-fit-uImage_v005.itb` (do not rename, provided [here](./boot/wnc-fit-uImage_v005.itb)) in the TFTP directory. This image contains the modified kernel and rootfs from openWRT. 
 
@@ -362,7 +363,7 @@ with `ssh root@192.168.1.1`.
 
 How to flash the NAND Flash:
 
-1. `scp` the new rootfsimage and kernelimage to the `/tmp/` directory of the Cradlepoint device (reminder: everything is in SDRAM with the openWRT image).
+1. `scp` the new rootfsimage and kernelimage to the `/tmp/` directory of the Cradlepoint device (reminder: everything is in SDRAM with the openWRT live image).
 2. Attach the NAND Flash partition containing KERNEL and ROOTFS called `/dev/mtd1`:
 ```
 ubiattach -b 1 -m 1
@@ -404,7 +405,7 @@ ubidettach ubi -m 1
 ```
 11. Reboot. The device shall boot with the new rootfs without CRC error.
  
-**Note about UBI**: Between the bare NAND FLash and the squashfs filesystem there is a layer in-between called [UBI](http://www.linux-mtd.infradead.org/doc/ubi.html), which takes care among other things of the Flash block management. 
+**Note about UBI**: Between the bare NAND FLash and the squashfs filesystem there is a layer called [UBI](http://www.linux-mtd.infradead.org/doc/ubi.html), which takes care among other things of the Flash block management. 
 
 If we `ssh` the device and type `sh` we get a root shell:
 
