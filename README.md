@@ -223,7 +223,7 @@ In the next chapter we will see how to flash the squashfs image in NAND Flash.
 To test our patched firmware we now need to flash it back in the NAND Flash. These are the steps:
 1. Boot the device with silent mode **disabled** (with buspirate and flashrom, don't forget the CRC)
 2. Interrupt u-boot via serial interface and get a u-boot console
-3. Use TFTP Boot to boot a live image containing a kernel plus initramfs from openWRT with prompt and root shell. For more information how to build this image see [here](./openwrt/).
+3. Use TFTP Boot to boot a live image containing a kernel plus initramfs from openWRT with prompt and root shell. For more information how to build the openWRT image see [here](./openwrt/).
 4. Use the UBI commands to erase and flash the NAND Flash KERNEL and ROOTFS partitions
 
 **Caveat**: even if only ROOTFS is changed, it is necessary to update the KERNEL too. 
