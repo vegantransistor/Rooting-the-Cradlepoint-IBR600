@@ -1,6 +1,6 @@
 # Rooting the Cradlepoint IBR600C
 
-This is a description of the work I did with [stulle123](https://github.com/stulle123) during Q4 2022 on the Cradlepoint IBR600C-150M-B-EU with FW Version 7.22.60.
+This is a description of the work I did with [stulle123](https://github.com/stulle123) end of 2022 on the Cradlepoint IBR600C-150M-B-EU with FW Version 7.22.60.
 
 ## IBR600C Flashdump
 
