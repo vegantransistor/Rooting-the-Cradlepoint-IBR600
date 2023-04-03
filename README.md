@@ -10,9 +10,9 @@ It was a sunny :sunny: day in September 2022 when someone put this device on my 
 
 The IBR600C is a LTE Modem & Router with Wifi, LAN and WAN Interfaces. It has an embedded webserver and cloud connectivity to the [Cradlepoint Netcloud](https://accounts.cradlepointecm.com/). 
 
-I could not resist to open it and see if I could get some information about the boot process and eventually the firmware. The main processor is a Qualcomm IPQ4019 with SDRAM, NOR and NAND Flash. A UART interface is accessible:
+I could not resist to open it and see if I could get some information about the boot process and eventually the firmware. The main processor is a Qualcomm IPQ4018 with SDRAM, NOR and NAND Flash. A UART interface is accessible:
 
-***TODO:PIC with UART PINS***
+![uart](./pictures/uart.jpg)
 
 At boot time, the UART interface only gives very limited information about the first bootloader, after that it becomes silent. 
 
@@ -24,7 +24,10 @@ The combination of NOR and NAND Flash is standard: bootloaders in NOR, OS and Ap
 
 The NOR Flash is easy to dump with a [Bus Pirate](http://dangerousprototypes.com/docs/Bus_Pirate) and [Flashrom](https://www.flashrom.org/Flashrom). The content is not encrypted and secure boot is not in place. 
 Here are the steps to dump the NOR Flash:
-1. Connect the Bus Pirate SPI interface to the NOR Flash located on the backside of the PCB: **TODO PIC?**
+1. Connect the Bus Pirate SPI interface to the NOR Flash located on the backside of the PCB: 
+
+![nor](./pictures/nor.jpg)
+
 2. Put the main processor in `RESET` state. This is needed because we can't have two SPI masters. 
 3. Power the device and dump the flash with flashrom (change the serial interface name):
 ```
@@ -220,7 +223,7 @@ In the next chapter we will see how to flash the squashfs image in NAND Flash.
 To test our patched firmware we now need to flash it back in the NAND Flash. These are the steps:
 1. Boot the device with silent mode **disabled** (with buspirate and flashrom, don't forget the CRC)
 2. Interrupt u-boot via serial interface and get a u-boot console
-3. Use TFTP Boot to boot a live image containing KERNEL + ROOTFS from openWRT with prompt and root shell
+3. Use TFTP Boot to boot a live image containing a kernel plus initramfs from openWRT with prompt and root shell. For more information how to build this image see [here](./openwrt/).
 4. Use the UBI commands to erase and flash the NAND Flash KERNEL and ROOTFS partitions
 
 **Caveat**: even if only ROOTFS is changed, it is necessary to update the KERNEL too. 
@@ -334,7 +337,7 @@ Note: `image.its` is provided [here](./boot/image.its)
 
 Connect your host pc to the Cradlepoint device with: 
 1. a serial terminal 8n1,115200 
-2. an Ethernet cable connected to the LAN (***TODO:CHECK!!! or WAN???***) port
+2. an Ethernet cable connected to the LAN port
 
 Set up a TFTP server on the host computer with `IP = 192.168.0.200` and put the image `wnc-fit-uImage_v005.itb` (do not rename, provided [here](./boot/wnc-fit-uImage_v005.itb)) in the TFTP directory. This image contains the modified kernel and rootfs from openWRT. 
 
@@ -409,7 +412,14 @@ ubidettach ubi -m 1
 
 If we `ssh` the device and type `sh` we get a root shell:
 
-***TODO: ADD ROOTSHELL***
+```
+ssh admin@192.168.0.1
+admin@192.168.0.1's password: 
+[admin@IBR600C-a38: /]$ sh
+/service_manager # id
+uid=0(root) gid=0(root)
+/service_manager # 
+```
 
 ## Disclosure
 
