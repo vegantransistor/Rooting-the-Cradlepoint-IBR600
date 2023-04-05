@@ -408,8 +408,6 @@ ubiupdatevol /dev/ubi0_1 /tmp/rootfsimage
 ubidettach ubi -m 1
 ```
 11. Reboot. The device shall boot with the new rootfs without CRC error.
- 
-**Note about UBI**: Between the bare NAND FLash and the squashfs filesystem there is a layer called [UBI](http://www.linux-mtd.infradead.org/doc/ubi.html), which takes care of the flash management. 
 
 If we `ssh` the device and type `sh` we get a root shell:
 
