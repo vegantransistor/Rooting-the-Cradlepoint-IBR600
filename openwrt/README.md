@@ -57,7 +57,7 @@ Extracted:
   Hash value:   57a8b4005aa83fe8f2c90a06b392bae265c81de9
 ```
 
-* unzip the uimage and then compress it with `lzma` (we need this because of the size!):
+* unzip the kernel image and then compress it with `lzma` (we need this because of the size!):
 
 ```
 gunzip -k kernel.gz
