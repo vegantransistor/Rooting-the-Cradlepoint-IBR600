@@ -1,7 +1,7 @@
 # How to build the openWRT live image for Cradlepoint IBR600C
 
 * Download an image for IPQ4018 with initramfs and uimage, e.g. [here](https://downloads.openwrt.org/releases/22.03.3/targets/ipq40xx/generic/openwrt-22.03.3-ipq40xx-generic-8dev_jalapeno-initramfs-fit-uImage.itb).
-* Information about this image can be print out with `dumpimage`:
+* Information about this image can be printed out with `dumpimage`:
 ```
 dumpimage -l openwrt-22.03.3-ipq40xx-generic-8dev_jalapeno-initramfs-fit-uImage.itb 
 FIT description: ARM OpenWrt FIT (Flattened Image Tree)
@@ -37,7 +37,7 @@ Created:         Tue Jan  3 01:24:21 2023
   Kernel:       kernel-1
   FDT:          fdt-1
 ```
-* extract the kernel with `dumpimage`
+* Extract the kernel with `dumpimage`
 ```
 dumpimage -T flat_dt openwrt-22.03.3-ipq40xx-generic-8dev_jalapeno-initramfs-fit-uImage.itb -p 0 -o kernel.gz
 Extracted:
@@ -57,14 +57,14 @@ Extracted:
   Hash value:   57a8b4005aa83fe8f2c90a06b392bae265c81de9
 ```
 
-* unzip the uimage and then compress it with `lzma`:
+* unzip the uimage and then compress it with `lzma` (we need this because of the size!):
 
 ```
 gunzip -k kernel.gz
 lzma kernel
 ```
 
-* make the image using image.its and device tree dt.dtb (provided as dtb and dts):
+* Make the image using `image.its` and the device tree `dt.dtb` (provided as dtb and dts for readability):
 
 ```
 mkimage -f image.its wnc-fit-uImage_v005.itb
