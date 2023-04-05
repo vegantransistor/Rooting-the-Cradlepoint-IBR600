@@ -220,7 +220,7 @@ mksquashfs squashfs-root/ rootfsimage -b 262144 -comp xz -no-xattrs
 
 In the next chapter we will see how to flash the squashfs image in NAND Flash.
  
-## Flash the patched Firmware 
+## Flash the new Firmware 
 
 To test the patched firmware we now need to flash it back in the NAND Flash. These are the steps:
 1. Boot the device with silent mode **disabled** (with buspirate and flashrom, see the first sections)
