@@ -1,53 +1,73 @@
-# Rooting the Cradlepoint IBR600C
+# Rooting the Cradlepoint IBR600C Router
 
-This is a description of the work I did with [stulle123](https://github.com/stulle123) end of 2022 on the Cradlepoint IBR600C-150M-B-EU with FW Version 7.22.60.
+This is a write-up of a project I did with [stulle123](https://github.com/stulle123) on the Cradlepoint `IBR600C-150M-B-EU` router (firmware version `7.22.60`).
 
-## IBR600C Flashdump
+* [IBR600C Flash Dump](#ibr600c-flash-dump)
+  * [Dumping NOR](#dumping-nor)
+  * [Boarding the U-Boot](#boarding-the-u-boot)
+  * [Dumping NAND](#dumping-nand)
+* [Preparing our Custom Firmware Image](#preparing-our-custom-firmware-image)
+  * [Patching the cpshell](#patching-the-cpshell)
+  * [Getting a Persistent U-Boot Console](#getting-a-persistent-u-boot-console)
+  * [Building the Squashfs ROOTFS Image](#building-the-squashfs-rootfs-image)
+* [Flashing the new Firmware ](#flashing-the-new-firmware)
+  * [Preparing the Kernel Image](#preparing-the-kernel-image)
+  * [Flashing the NAND Images](#flashing-the-nand-images)
+    * [Booting OpenWRT](#booting-openwrt)
+    * [Flashing our Custom Kernel and ROOTFS](#flashing-our-custom-kernel-and-rootfs)
+* [Responsible Disclosure](#responsible-disclosure)
 
-It was a sunny :sunny: day in September 2022 when someone put this device on my desk.
+## IBR600C Flash Dump
+
+It was a sunny :sunny: day in September 2022 when someone put this device on my desk:
 
 ![crad](./pictures/crad.png)
 
-The IBR600C is a LTE Modem & Router with Wifi, LAN and WAN Interfaces. It has an embedded webserver and cloud connectivity to the [Cradlepoint Netcloud](https://accounts.cradlepointecm.com/). 
+The `IBR600C` is a LTE modem and router with Wifi, LAN and WAN interfaces. It has an embedded web server and cloud connectivity to [Cradlepoint's NetCloud](https://accounts.cradlepointecm.com/) service. The device's firmware is based on Linux and the main applications (shell, web server, sshd, etc.) are almost completely written in Python.
 
-I could not resist to open it and see if I could get some information about the boot process and eventually the firmware. The main processor is a Qualcomm IPQ4018 with SDRAM, NOR and NAND Flash. The combination of NOR and NAND Flash is common: bootloaders in NOR, OS and Application in NAND. Both flashes are connected via the same SPI bus to the processor. 
+I could not resist to open the box and see if I could get some information about the boot process and eventually the firmware. The main processor is a `Qualcomm IPQ4018` with SDRAM, NOR and NAND flash memory. The combination of NOR and NAND flash is common: bootloaders in NOR, OS and applications in NAND. Both flashes are connected via the same SPI bus to the Qualcomm processor.
 
-A UART interface is accessible:
+A UART interface is easily accessible:
 
 ![uart](./pictures/uart.jpg)
 
-At boot time, this interface only gives very limited information about the first bootloader, after that it becomes silent. 
+At boot time this interface only outputs very limited information about the first bootloader, after that it becomes silent 😞
 
-Here is a picture of the device opened with logic analyzer, serial interface and bus pirate connected:
+Here's a picture of the router hooked up to a logic analyzer, Bus Pirate and UART:
 
 ![opened](./pictures/opened.png)
 
-### NOR
+### Dumping NOR
 
-The NOR Flash is easy to dump with a [Bus Pirate](http://dangerousprototypes.com/docs/Bus_Pirate) and [Flashrom](https://www.flashrom.org/Flashrom). The content is not encrypted and secure boot is not in place. 
-Here are the steps to dump the NOR Flash:
-1. Connect the Bus Pirate SPI interface to the NOR Flash located on the backside of the PCB: 
+The NOR flash is easy to dump with a [Bus Pirate](http://dangerousprototypes.com/docs/Bus_Pirate) and [flashrom](https://www.flashrom.org/Flashrom). The content is not encrypted and Secure Boot is not in place.
 
+Here are the steps to dump the NOR flash:
+
+1. Connect the Bus Pirate SPI interface to the NOR flash located on the backside of the PCB:
 ![nor](./pictures/nor.jpg)
-
 2. Put the main processor in `RESET` state. This is needed because we can't have two SPI masters. 
-3. Power the device and dump the flash with flashrom (change the serial interface name):
+3. Power on the device and dump the flash with flashrom (change the serial interface's name as needed):
 ```
-flashrom -V -p buspirate_spi:dev=/dev/tty.usbserial-AG0JGQV3,serialspeed=230400 -n -r nor_dump.bin
+$ flashrom -V -p buspirate_spi:dev=/dev/tty.usbserial-AG0JGQV3,serialspeed=230400 -n -r nor_dump.bin
 ```
 
-The u-boot environmental variables, part of the flash dump, are a good starting point. In our case, a `silent` variable is present:
+### Boarding the U-Boot
+
+The U-Boot environmental variables, part of the flash dump, are a good starting point. In our case, the `silent` variable is present:
+
 > silent=yes
 
-We can change it to `no`.
+We can just change it to `no`.
 
-**Caveat**: a CRC32 of the whole NOR Flash block (65536 bytes) protects the integrity of the u-boot environmental variables. It is placed at the very beginning of the flash block. The CRC32 of the flash block must be recalculated (CRC32 excluded, i.e. 65536-4 bytes) and put it at the very beginning of the block. The patched NOR Flash block containing the u-boot environmental variables is provided [here](./boot/nor_block_ubootenv_nosilent.bin).
+**Caveat**: a CRC32 checksum of the whole NOR flash block (65536 bytes) protects the integrity of the U-Boot environmental variables. It is placed at the very beginning of the flash block and must be recalculated (CRC32 value excluded, i.e. 65536-4 bytes). A patched NOR flash block containing the U-Boot environmental variables is provided [here](./boot/nor_block_ubootenv_nosilent.bin).
 
-Now the NOR device can be re-flashed:
+Now the NOR flash memory can be re-flashed:
+
 ```
-flashrom -V -p buspirate_spi:dev=/dev/tty.usbserial-AG0JGQV3,serialspeed=230400 -n -w nor_dump_nosilent.bin
+$ flashrom -V -p buspirate_spi:dev=/dev/tty.usbserial-AG0JGQV3,serialspeed=230400 -n -w nor_dump_nosilent.bin
 ```
-During next boot, we have a u-boot console 😂:
+
+During next boot we have a U-Boot console by just pressing any key: 😂
 
 ```
 U-Boot 2012.07 [Trail Mix GARNET v9.40,local] (Jan 04 2018 - 11:42:32)
@@ -62,8 +82,7 @@ SF: Detected W25M02GV with page size 2 KiB, total 256 MiB
 SF: Detected W25Q64 with page size 4 KiB, total 8 MiB
 ipq_spi: page_size: 0x100, sector_size: 0x1000, size: 0x800000
 264 MiB
-MMC:   
-
+MMC:
 
 SW Version: v0.0.3
 machid: 8010100
@@ -90,86 +109,102 @@ Please choose the operation:
  9 ... 0 
 ```
 
-At this point, it is possible to load some live image in the device SDRAM via TFTP.
+At this point it is possible to load any live image into the router's SDRAM via TFTP.
 
-### NAND 
+### Dumping NAND 
 
-NAND Flash dump is more difficult to dump. I recorded the SPI interface activity during the boot phase with the [saleae](https://www.saleae.com/) logic analyzer. There are two big activity blocks corresponding to the downloading operation of the Linux Kernel (first) and the Root Filesystem. Here is the recording of ROOTFS:
+The NAND flash is more difficult to dump. I sniffed the SPI bus during the boot phase with the [Saleae](https://www.saleae.com/) logic analyzer. There are two big copy transactions going on. They correspond to the Linux kernel and the root file system being downloaded from NAND to SRAM.
+
+Here is the recording of the rootfs download:
 
 ![ROOTFS](./pictures/rootfs.png)
 
-Postprocessing: first the raw data are extracted with the Saleae SPI decoder feature and transformed in binary format with a [python script](./scripts/make_bin.py). However, the raw data still contain some handshake information, see the waveform:
+For extracting the rootfs contents some post processing is required. First, the raw data is extracted with Saleae's SPI decoder feature and transformed into binary with a simple [Python script](./scripts/make_bin.py). However, the raw data still contains some handshake information, see the waveform:
 
 ![handshake](./pictures/handshake.png)
 
-A [second script](./scripts/extract_nand.py) removes the handshakes. Then all `0xFFFFFFFF` at the end of the file are removed. Finally the root filesystem is available:
+With a [second script](./scripts/extract_nand.py) we can remove the handshakes. It just removes all `0xFFFFFFFF` at the end of the binary file.
+
+Finally, we have the root file system:
 
 ```
-binwalk rootfs.cradl
+$ binwalk rootfs.cradl
 DECIMAL       HEXADECIMAL     DESCRIPTION
 --------------------------------------------------------------------------------
 0             0x0             Squashfs filesystem, little endian, version 4.0, compression:xz, size: 18464354 bytes, 2026 inodes, blocksize: 262144 bytes, created: 2022-06-02 18:01:34
 ```
 
-With `unsquashfs` all files can be extracted.
+With the `unsquashfs` tool we can proceed to extract all files.
 
-With the same process the kernel image can be extracted.
+To get the kernel image just repeat the same steps as described above.
 
-## Patch the Firmware to get a Root Shell
-The device implements a shell called **cpshell** accessible over SSH or internal webserver. However, this is not a linux shell, it has only limited application-related commands. We are now going to patch this shell to get a linux root shell. 
+## Preparing our Custom Firmware Image
 
-The device firmware is based on Linux and the application is almost completely written in Python.
+The router has a custom shell implemented in Python called *cpshell* which is accessible via SSH or the web interface. However, this is not a "normal" Linux shell as it only supports limited commands for configuring the router. It provides a protected `sh` command that spawns `/bin/sh` available to Cradlepoint's remote technical support. We can patch the firmware to enable the `sh` command for us.
 
-### Patching the CPSHELL
+### Patching the cpshell
 
-In the `/service_manager/` directory there is a python bytecode file called `cpshell.pyc`. It implements the reduced cradlepoint shell. After decompiling it with `decompyle3` (https://pypi.org/project/decompyle3/), following interesting code blocks can be found:
+In the rootfs's `/service_manager/` directory there is a Python bytecode file called `cpshell.pyc`. After decompiling it with [decompyle3](https://github.com/rocky/python-decompile3/), the following interesting code blocks can be found:
+
+```python
+if self.superuser:
+   self.cmds.update({'sh':(
+      self.sh, 'Internal Use Only'), 
+     'python':(
+      self.python, 'Internal Use Only')})
 ```
-            if self.superuser:
-                self.cmds.update({'sh':(
-                  self.sh, 'Internal Use Only'), 
-                 'python':(
-                  self.python, 'Internal Use Only')})
-```
+
 And:
-```
-        def sh(self):
-            self.fork_exec(lambda: os.execl('/bin/sh', 'sh'))
-```
-The variable `superuser` is initialized to `false` :face_with_spiral_eyes: We just need to change the branch condition...
 
-`decompyle3` is not able to decompile this file error-free, so that we can't just patch the `.py` file and recompile it. We have to patch the compiled python code `.pyc`.
+```python
+def sh(self):
+   self.fork_exec(lambda: os.execl('/bin/sh', 'sh'))
+```
 
-First we can disassemble the file with `pydisasm` (https://github.com/rocky/python-xdis).
+The variable `superuser` is initialized to `False` :face_with_spiral_eyes: So, we just need to patch the branch condition...
+
+[decompyle3](https://github.com/rocky/python-decompile3/) is not able to decompile the entire `cpshell.pyc` file, so we can't just update the resulting Python code and recompile it. In fact, we need to patch the Python byte code (`.pyc`) itself.
+
+To do this, we first need to disassemble the `cpshell.pyc` file with [pydisasm](https://github.com/rocky/python-xdis):
+
+```bash
+$ pydisasm --format xasm cpshell.pyc > cpshell.pyasm
 ```
-pydisasm --format xasm cpshell.pyc > cpshell.pyasm
-```
-Then we search for the variable `superuser` and branches associated to this variable. Here is the branch related to the code above:
-```
+
+In the resulting assembly code we can then search for the variable `superuser` and the branches associated to this variable. Here's the branch related to the code above:
+
+```assembly
 237:
             LOAD_FAST            0 (self)
             LOAD_ATTR            13 (superuser)
             EXTENDED_ARG         1 (256)
             POP_JUMP_IF_FALSE    L500 (to 500)
 ```
-We need to find the position of this `POP_JUMP_IF_FALSE` branch in the compiled python file and replace it with `POP_JUMP_IF_TRUE`. With following instructions we can print out the opcodes related to the assembly code above:
-```
+
+We need to find the position of this `POP_JUMP_IF_FALSE` branch in the `cpshell.pyc` file and just replace it with `POP_JUMP_IF_TRUE`. With the following piece of code we can print out the opcodes related to the assembly code above:
+
+```python
 import opcode
+
 for op in ['LOAD_FAST', 'LOAD_ATTR', 'EXTENDED_ARG', 'POP_JUMP_IF_FALSE']:
-print('%-16s%s' % (op, opcode.opmap[op].to_bytes(1,byteorder='little')))
+   print('%-16s%s' % (op, opcode.opmap[op].to_bytes(1,byteorder='little')))
 ```
-A bytecode instruction is (mostly) composed of the 8 bit opcode and a 8 bit variable reference. In our case we can reconstruct following binary sequence associated with the disassembly above:
+
+A Python bytecode instruction is (mostly) composed of the 8 bit opcode and a 8 bit variable reference. In our case we can reconstruct the following binary sequence associated with the disassembly above:
+
 ```
 0x7c 0x00 0x6a 0x0d 0x90 0x01 0x72
 ```
-There is only one match in the `cpshell.pyc` file.
 
-With `opcode` we find the opcode for `POP_JUMP_IF_FALSE` -- `0x73`, we can replace the sequence `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x72` with `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x73`. The cpshell is now patched.
+Next, we open the `cpshell.pyc` file with a hex editor and search for the byte sequence (there's only one match). 
 
-### Patching the automatic silent mode re-enabling function
+With Python's `opcode` library we can find the opcode for `POP_JUMP_IF_FALSE` -- `0x73` -- and replace the sequence `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x72` with `0x7c 0x00 0x6a 0x0d 0x90 0x01 0x73`. The cpshell is now patched and the `sh` command works out of the box.
 
-The application includes a feature that (re-)enables silent boot every time it starts. We also need to patch this feature. In `/service_manager/services/` we find a file called `silentboot.pyc`. Let's decompile this file with `decompyle3` (this time error-free):
+### Getting a Persistent U-Boot Console
 
-```
+The router includes a feature that (re-)enables silent boot every time it starts. We also need to disable this feature to maintain a persistent U-Boot console. In the `/service_manager/services/` folder we find a file called `silentboot.pyc`. Let's decompile it with [decompyle3](https://github.com/rocky/python-decompile3/) again (this time error-free):
+
+```python
 import services, cp
 from services.utils.ubootenv import UbootEnv
 
@@ -190,9 +225,9 @@ if cp.platform == 'router':
     services.register(SilentBoot)
 ```
 
-We see that the u-boot `silent` variable is changed to `yes`. We can remove that:
+We see that the U-Boot `silent` variable is changed to `yes`. We can remove this:
 
-```
+```python
 import services, cp
 from services.utils.ubootenv import UbootEnv
 
@@ -208,41 +243,43 @@ if cp.platform == 'router':
     services.register(SilentBoot)
 ```
 
-We have to recompile the python source file in a `pyc` file and replace the original one. 
+We now just have to recompile the source code into Python byte code (`.pyc`) and replace the original one.
 
-### Recompile the squashfs rootfs image
+### Building the Squashfs ROOTFS Image
 
-After patching the application, we can re-build the squashfs image:
+After patching the Python byte code, we can re-build the squashfs image:
 
+```bash
+$ mksquashfs squashfs-root/ rootfsimage -b 262144 -comp xz -no-xattrs
 ```
-mksquashfs squashfs-root/ rootfsimage -b 262144 -comp xz -no-xattrs
-```
 
-In the next chapter we will see how to flash the squashfs image in NAND Flash.
+In the next chapter we will see how to flash our custom squashfs image to the NAND flash.
  
-## Flash the new Firmware 
+## Flashing the new Firmware
 
-To test the patched firmware we now need to flash it back in the NAND Flash. These are the steps:
-1. Boot the device with silent mode **disabled** (with buspirate and flashrom, see the first sections)
-2. Interrupt u-boot via the serial interface and get a u-boot console
-3. Use TFTP Boot to boot a live image containing a kernel and initramfs from openWRT with prompt and root shell. For more information how to build the openWRT image see [here](./openwrt/).
-4. Use the UBI commands to erase and flash the NAND Flash KERNEL and ROOTFS partitions
+To test the patched firmware we now need to flash it back to the NAND Flash. These are the necessary steps:
 
-**Caveat**: even if only ROOTFS is changed, it is necessary to update the KERNEL too. 
+1. Boot the router with silent mode **disabled** (with Bus Pirate and flashrom, see [first section](#boarding-the-u-boot)).
+2. Interrupt U-Boot via the serial interface and get a U-Boot console.
+3. Use TFTP Boot to boot a live image containing a kernel and initramfs from [OpenWRT](https://openwrt.org/) which provides a login root shell. For more information how to build the OpenWRT image see my instructions [here](./openwrt/).
+4. Use several UBI commands to erase and write the NAND flash's kernel and rootfs partitions.
 
-### Preparation of KERNEL image
+**Caveat**: even if only the rootfs is changed, it is necessary to update the kernel too.
 
-The raw kernel image dumped from flash contains:
-* Linux Kernel in gzip format 
-* ROOTFS parameters (CRC32 and length) located at the end of the gzip kernel binary
-* Device Tree
+### Preparing the Kernel Image
 
-The image uses u-boot format so we can use `mkimage` and `dumpimage`. 
+The raw kernel image which we dumped from flash contains:
 
-First we can print out some info:
+* The Linux kernel in gzip format 
+* The rootfs parameters (CRC32 and length) located at the end of the gzip'ed kernel binary
+* The device tree
 
-```
-mkimage -l kernelimage 
+The image uses the U-Boot format so we can use the `mkimage` and `dumpimage` commands from the `u-boot-tools` Debian package.
+
+First, we can print out some info:
+
+```bash
+$ mkimage -l kernelimage
 FIT description: CPRELEASE COCONUT IBR600C 7.22.60
 Created:         Thu Nov 10 12:00:28 2022
  Image 0 (kernel@1)
@@ -277,10 +314,10 @@ Created:         Thu Nov 10 12:00:28 2022
   FDT:          fdt@1
 ```
 
-Then we extract device tree and kernel:
+Then, we extract the kernel and device tree:
 
-```
-dumpimage -p 0 -o kernel.gz -T flat_dt kernelimage 
+```bash
+$ dumpimage -p 0 -o kernel.gz -T flat_dt kernelimage
 Extracted:
  Image 0 (kernel@1)
   Description:  unavailable
@@ -296,9 +333,10 @@ Extracted:
   Hash value:   fcca93bc
   Hash algo:    sha1
   Hash value:   5a4accc0eeeeafa42975e7d3943d784887f8ab78
+```
 
-
-dumpimage -p 1 -o dt.dtb -T flat_dt kernelimage 
+```bash
+$ dumpimage -p 1 -o dt.dtb -T flat_dt kernelimage 
 Extracted:
  Image 1 (fdt@1)
   Description:  IBR600C device tree blob
@@ -313,39 +351,47 @@ Extracted:
   Hash value:   3a2f1a92f537c1e614fde30c3bce9738cc76a225
 ```
 
-We can now modify the `kernel.gz` binary with the new ROOTFS information. The last three words of the kernel.gz file contain ROOTFS CRC, ROOTFS Length and 0x00000000, in little endian format. Note that these three words are not part of the compressed image, they are just appended at the end.
+We can now modify the `kernel.gz` binary with the gathered rootfs information. The last three words of the `kernel.gz` file are the rootfs's CRC, the rootfs's length and the value `0x00000000` (in little endian format). Note, that these three words are not part of the compressed image, they are just appended to the end of the `kernel.gz` file.
 
-First we calculate the CRC of the ROOTFS image:
-```
-crc32 rootfsimage
-```
-Note the length of the rootfs image in bytes, convert it in hex:
-> E.g. 19034112 bytes, or 0x01227000 bytes
+First, we calculate the new CRC of the rootfs image:
 
-We open kernel.gz in a hex editor, change the CRC and length. For example (last three bytes):
-* Original (CRC32 - Length - 0x0):
+```bash
+$ crc32 rootfsimage
+```
+
+Next, get the size of the rootfs image in bytes and convert it to hex. For example, `19034112` bytes --> `0x01227000` bytes.
+
+We then open the `kernel.gz` file in a hex editor and change its CRC and length. For example:
+
+* Original (CRC32 -- length -- `0x0`):
 > 0xB4D11088 0x00733302 0x00000000
-* Changed :
+
+* New:
 > 0x67452301 0x01227000 0x00000000
 
-Now we can re-build the KERNEL image:
+Finally, we can re-build the kernel image:
+
+```bash
+$ mkimage -f image.its kernelimage
 ```
-mkimage -f image.its kernelimage
-```
-Note: `image.its` is provided [here](./boot/image.its)
 
-### Flash the images
+Note: A sample `image.its` image is provided [here](./boot/image.its).
 
-Connect the host pc to the Cradlepoint device with: 
-1. a serial terminal 8n1,115200 
-2. an Ethernet cable connected to the LAN port
+### Flashing the NAND Images
 
-Set up a TFTP server on the host computer with `IP = 192.168.0.200` and put the image `wnc-fit-uImage_v005.itb` (do not rename, provided [here](./boot/wnc-fit-uImage_v005.itb)) in the TFTP directory. This image contains the modified kernel and rootfs from openWRT. 
+To get started, connect your host PC to the Cradlepoint router via serial (`8n1, 115200`) and an Ethernet cable (LAN port). We'll first boot the router with a custom OpenWRT image to use its UBI tooling to flash the device with our prepared kernel and rootfs images from the previous section.
 
-Boot the Cradlepoint with modified NOR FLash (silent mode disabled), so that Uboot messages are displayed. Then press 1 to load image via TFTP. 
-Note that the TFTP Server IP can be changed by modifying the u-boot variable `serverip` and using `saveenv`.
-Cradlepoint will TFTP the file, unpack it and start the kernel. Now we have a root shell via the serial interface:
-```
+#### Booting OpenWRT
+
+For this, we first set up a TFTP server on our host PC with the IP address `192.168.0.200` and put the image `wnc-fit-uImage_v005.itb` (**don't** rename it, provided [here](./boot/wnc-fit-uImage_v005.itb)) into your root TFTP directory. This image contains a modified kernel and rootfs from the OpenWRT project.
+
+Next, boot the Cradlepoint router with the patched NOR firmware (silent mode disabled, see [here](#boarding-the-u-boot)), so that U-Boot messages are displayed. In the U-Boot console press `1` to load the custom OpenWRT image via TFTP.
+
+(Note, that the TFTP server's IP address can be changed by modifying the U-Boot variable `serverip`. Use the `saveenv` command to save the change.)
+
+Now, we have a OpenWRT root shell via the serial interface:
+
+```bash
 BusyBox v1.35.0 (2022-10-18 13:09:23 UTC) built-in shell (ash)
 _______ ________ __
 | |.-----.-----.-----.| | | |.----.| |_
@@ -362,56 +408,76 @@ in order to prevent unauthorized SSH logins.
 --------------------------------------------------
 root@OpenWrt:~#
 ```
-Since we want to update the NAND Flash with big images, we will now switch so SSH. Change the IP Address of the host computer to 192.168.1.200 and SSH the Cradlepoint
-with `ssh root@192.168.1.1`. 
 
-How to flash the NAND Flash:
+#### Flashing our Custom Kernel and ROOTFS
 
-1. `scp` the new rootfs image and kernel image to the `/tmp/` directory of the Cradlepoint device (reminder: everything is in SDRAM while running the openWRT live image).
-2. Attach the NAND Flash partition containing KERNEL and ROOTFS called `/dev/mtd1`:
-```
-ubiattach -b 1 -m 1
-```
-Now you shall see the three ubi volumes `/dev/ubi0_0` (kernel), `/dev/ubi0_1` (rootfs) and `/dev/ubi0_2` (empty, used as buffer).
+Since we want to update the NAND flash with big images, we will now switch so SSH. Change the IP address of your host computer to `192.168.1.200` and ssh into the Cradlepoint router via `ssh root@192.168.1.1`. Follow these steps to update the NAND flash from the OpenWRT shell:
 
-3. Wipe out the first partition (partition 0), which contains the kernel image.
+1. `scp` the new rootfs and kernel images to the `/tmp/` directory of the router (reminder: everything is stored in SDRAM at this point).
+
+2. Mount the NAND flash partition `/dev/mtd1` containing the kernel and rootfs:
+
+```bash
+$ ubiattach -b 1 -m 1
 ```
-ubiupdatevol /dev/ubi0_0 -t
+
+Now, you should see the three UBI volumes `/dev/ubi0_0` (kernel), `/dev/ubi0_1` (rootfs) and `/dev/ubi0_2` (empty, used as a buffer).
+
+3. Wipe out the first partition (partition 0) which contains the kernel image:
+
+```bash
+$ ubiupdatevol /dev/ubi0_0 -t
 ```
-4. Flash the kernel image
+
+4. Flash the new kernel image:
+
+```bash
+$ ubiupdatevol /dev/ubi0_0 /tmp/kernelimage
 ```
-ubiupdatevol /dev/ubi0_0 /tmp/kernelimage
+
+5. Wipe out the second partition (partition 1), which contains the rootfs:
+
+```bash
+$ ubiupdatevol /dev/ubi0_1 -t
 ```
-5. Wipe out the second partition (partition 1), which contains the rootfs.
+
+6. **Optional**: Resize the rootfs partition if the new rootfs is bigger than the partition size (i.e. the original one):
+
+```bash
+$ ubirsvol /dev/ubi0 -n 1 -s [nb of bytes of the new rootfs image]
 ```
-ubiupdatevol /dev/ubi0_1 -t
-```
-6. *Optional*: Resize the rootfs partition if the new rootfs is bigger than the partition size (i.e. the original one):
-```
-ubirsvol /dev/ubi0 -n 1 -s [nb of bytes of the new rootfs image]
-```
-7. *Optional*: Resize the third partition if the step before failed with following  error:
-```
+
+7. **Optional**: Resize the third partition if the step before failed with following error:
+
+```bash
 ubi_resize_volume: not enough PEBs: requested 4, available 0
 ```
-Use ubinfo to display the size of the image and partitions. Note that the third partition does not contain any data so it can be resized:
-```
-ubirsvol /dev/ubi0 -n 2 -s [nb of bytes calculated to have enough place for ubi0_1]
-```
-8. Re-do step 7. if needed.
-9. Flash the rootfs image
-```
-ubiupdatevol /dev/ubi0_1 /tmp/rootfsimage
-```
-10. Detach the ubi partition
-```
-ubidettach ubi -m 1
-```
-11. Reboot. The device shall boot with the new rootfs without CRC error.
 
-If we `ssh` the device and type `sh` we get a root shell:
+For this, use `ubinfo` to display the size of the partitions and the image. Note, that the third partition does not contain any data so it can be resized:
 
+```bash
+$ ubirsvol /dev/ubi0 -n 2 -s [nb of bytes calculated to have enough space for ubi0_1]
 ```
+
+8. Repeat step `7` if needed.
+
+9. Flash the rootfs image:
+
+```bash
+$ ubiupdatevol /dev/ubi0_1 /tmp/rootfsimage
+```
+
+10. Unmount the UBI partition:
+
+```bash
+$ ubidettach ubi -m 1
+```
+
+11. Reboot. The device should boot with the new rootfs without throwing a CRC error (hopefully).
+
+Finally, if we `ssh` into the router and type `sh` we get a root shell 🍾
+
+```bash
 ssh admin@192.168.0.1
 admin@192.168.0.1's password: 
 [admin@IBR600C-a38: /]$ sh
@@ -420,6 +486,6 @@ uid=0(root) gid=0(root)
 /service_manager # 
 ```
 
-## Disclosure
+## Responsible Disclosure
 
-These findings have been disclosed to Cradlepoint on 2023-01-05.
+These *findings* have been disclosed to Cradlepoint on 2023-01-05.
