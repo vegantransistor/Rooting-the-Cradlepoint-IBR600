@@ -1,10 +1,16 @@
+from pathlib import Path
 
+miso_file = Path("rootfs_miso.bin")
+mosi_file = Path("rootfs_mosi.bin")
+rootfs_file = Path("rootfs.bin")
 
-miso = open("rootfs_miso.bin", mode="rb")
-mosi = open("rootfs_mosi.bin", mode="rb")
-
-rootfsmiso = miso.read()
-rootfsmosi = mosi.read()
+try:
+    with miso_file.open(mode="rb") as miso:
+        rootfsmiso = miso.read()
+    with mosi_file.open(mode="rb") as mosi:
+        rootfsmosi = mosi.read()    
+except OSError as error:
+    print(f"Could not read miso/mosi files: {error}")
 
 rootfs = bytearray(len(rootfsmosi))
 
@@ -28,5 +34,8 @@ print(index_data)
 
 rootfsresized = rootfs[0:index_data]
 
-root = open("rootfs.bin", mode="wb")
-root.write(rootfsresized)
+try:
+    with rootfs_file.open(mode="wb") as rootfs:
+        rootfs.write(rootfsresized)
+except OSError as error:
+    print(f"Could not write to rootfs: {error}")
