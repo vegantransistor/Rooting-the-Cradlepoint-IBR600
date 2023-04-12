@@ -1,9 +1,11 @@
-# How to build the openWRT live image for Cradlepoint IBR600C
+# How to build an OpenWRT Image for the Cradlepoint IBR600C Router
 
-* Download an image for IPQ4018 with initramfs and uimage, e.g. [here](https://downloads.openwrt.org/releases/22.03.3/targets/ipq40xx/generic/openwrt-22.03.3-ipq40xx-generic-8dev_jalapeno-initramfs-fit-uImage.itb).
-* Information about this image can be printed out with `dumpimage`:
-```
-dumpimage -l openwrt-22.03.3-ipq40xx-generic-8dev_jalapeno-initramfs-fit-uImage.itb 
+* Download an OpenWRT image for the `IPQ4018` with initramfs and uimage (e.g. [this one](https://downloads.openwrt.org/releases/22.03.3/targets/ipq40xx/generic/openwrt-22.03.3-ipq40xx-generic-8dev_jalapeno-initramfs-fit-uImage.itb)).
+
+* Information about the image can be printed out with the `dumpimage` command:
+
+```bash
+$ dumpimage -l openwrt-22.03.3-ipq40xx-generic-8dev_jalapeno-initramfs-fit-uImage.itb 
 FIT description: ARM OpenWrt FIT (Flattened Image Tree)
 Created:         Tue Jan  3 01:24:21 2023
  Image 0 (kernel-1)
@@ -37,9 +39,11 @@ Created:         Tue Jan  3 01:24:21 2023
   Kernel:       kernel-1
   FDT:          fdt-1
 ```
-* Extract the kernel with `dumpimage`
-```
-dumpimage -T flat_dt openwrt-22.03.3-ipq40xx-generic-8dev_jalapeno-initramfs-fit-uImage.itb -p 0 -o kernel.gz
+
+* Extract the kernel with `dumpimage`:
+
+```bash
+$ dumpimage -T flat_dt openwrt-22.03.3-ipq40xx-generic-8dev_jalapeno-initramfs-fit-uImage.itb -p 0 -o kernel.gz
 Extracted:
  Image 0 (kernel-1)
   Description:  ARM OpenWrt Linux-5.10.161
@@ -57,21 +61,17 @@ Extracted:
   Hash value:   57a8b4005aa83fe8f2c90a06b392bae265c81de9
 ```
 
-* unzip the kernel image and then compress it with `lzma` (we need this because of the size!):
+* Unzip the kernel image and compress it with `lzma` (we need this because of the size!):
 
-```
-gunzip -k kernel.gz
-lzma kernel
-```
-
-* Make the image using `image.its` and the device tree `dt.dtb` (provided as dtb and dts for readability):
-
-```
-mkimage -f image.its wnc-fit-uImage_v005.itb
+```bash
+$ gunzip -k kernel.gz
+$ lzma kernel
 ```
 
-* Download this image via TFTP
+* Build the image using `image.its` and the device tree `dt.dtb` (provided as `dtb` and `dts` for readability reasons):
 
+```bash
+$ mkimage -f image.its wnc-fit-uImage_v005.itb
+```
 
-
-
+* [Download this image via TFTP](../README.md/#booting-openwrt)
