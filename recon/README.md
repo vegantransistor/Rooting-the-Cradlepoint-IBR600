@@ -15,6 +15,38 @@
   - **TODO**: Try to boot into Single-User-Mode by adding `S` to the kernel command line
 - Main boot script: `/etc/rc`
 
+## Remote Attack Surfaces
+
+- Search for `CradlepointHTTPService` and `SSH-2.0-CradlepointSSHService` on ZoomEye or Shodan.
+
+### Remote Technical Support
+
+- If enabled, the `cproot` user is activated (see details [here](https://customer.cradlepoint.com/s/article/Security-Update-Tech-Support-Mode-warning-bypass))
+- Technical support can be enabled in `/service_manager/config_dtd.jsonmin`
+- Main `handle_techsupport_access_enable_attempt()` method in `/service_manager/service_manager.pcy` which validates the license file by calling `validate_license()` in `/service_manager/service/utils/feature.pyc`
+- Need to update the license file to enable technical support access
+  - License can be seen using the `feature` command in the CPshell
+  - `/service_manager/_factory.bin.extracted/100E7` includes or points to the license file (`SeenKeyFiles` dictionary key in `feature.pyc`)
+  - You can update the license via the Web UI (see [here](https://customer.cradlepoint.com/s/article/Changing-Licenses-within-NetCloud-Manager))
+  - The license file is signed with a RSA private key :-(
+  - RSA Public Key (the RSA private key has 2048 bits):
+```
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq7bUMXk3DRxObHM+do6K
+nSCCYB3AcDAk0R56O+SopnOyeMbtUPzoxllDsX9+hiJDyrIrPVJsd1hs7jHjhxiX
+yNXEZtItZ3VTbCrK/08dXCB8Ujpmf/NlEUn+EGislviOKB6rw9eBOrKf2OCQs1mc
+pAnfANXbjpsZ+t+yn6bGIfvNgUdQbel/FXITMqPr2L+zqirI4r0Y7VicGqYzyahR
+xT8rEd/I2/11FrbaVT/ps+y/GmGODi3d3LZX1pH+wgH2yHCWcNTs0CPTDg9QpPxM
+fWREQHJzo+Vp8XGHKbEPgczYOPHWrgbeAjSR/C/FND7ZrCTD9rt7O1x4AWWcu/Pm
+ZQIDAQAB
+-----END PUBLIC KEY-----
+```
+  - `validate_license()` method in `/service_manager/service/utils/feature.pyc`:
+    - Signature must be a valid RSA signature
+    - MAC address must be on a `License Authorized MAC` list
+    - USB serials must be on a `Authorized Serial` list
+    - `AuthorizedFeatures` must include the string `f0c200da-ff54-11e9-96a9-acde48001122`
+
 ## LAN Ports
 
 - TCP: `22`, `53` (dnsmasq), `80`, `443`, `20000`, `30000`, `35000`, `45000`, `46000`, `47000`
