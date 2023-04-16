@@ -7,7 +7,7 @@
 - MAC addresses: `2a:30:44:53:9a:38` (LAN), `00:30:44:53:9a:38` (WAN)
 
 ### Init System
-- Kernel `4.4` --> kernel exploits available (danger zone, might brick the device)
+- Kernel `4.4` --> kernel exploits [available](https://www.exploit-db.com/) (danger zone, might brick the device)
 - Uses SysVinit
 - Init program: `/init`
 - `/etc/inittab`:
@@ -27,7 +27,7 @@
 - Need to update the license file to enable technical support access
   - License can be seen using the `feature` command in the CPshell
   - `/service_manager/_factory.bin.extracted/100E7` includes or points to the license file (`SeenKeyFiles` dictionary key in `feature.pyc`)
-  - You can update the license via the Web UI (see [here](https://customer.cradlepoint.com/s/article/Changing-Licenses-within-NetCloud-Manager))
+  - License can be updated via the Web UI (see [here](https://customer.cradlepoint.com/s/article/Changing-Licenses-within-NetCloud-Manager))
   - The license file is signed with a RSA private key :-(
   - RSA Public Key (the RSA private key has 2048 bits):
 ```
@@ -163,7 +163,7 @@ def _generate_sig(db, mode=None):
        cached_mac = bytes(board.mac_addrs[0])
    return hmac.new(cached_mac, (msg.encode()), digestmod=(hashlib.md5)).hexdigest()
 ```
-- Encrypted passwords are stored in `/service_manager/config.bin`:
+- Encrypted passwords are stored in `/service_manager/config.bin` (factory default configuration):
   - Extract contents with `$ binwalk --extract config.bin`
   - There are several keys and passwords stored in the `100FF` binary file
   - The encrypted `admin` user password is also stored in the `200EA` binary file
