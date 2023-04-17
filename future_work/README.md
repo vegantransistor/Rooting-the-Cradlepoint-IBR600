@@ -35,3 +35,6 @@ $ grep -iE "os.system|os.popen|commands.getstatusoutput|commands.getoutput|comma
 - Find bugs in the custom SSH server
 - Find bugs in the custom shell
 - Try to bypass the license checks (see [Reddit thread](https://www.reddit.com/r/sysadmin/comments/wk6744/cradlepoint_licensing_terms_update/?rdt=47589))
+- USB attacks, e.g.:
+  - Flash malicious firmware via USB
+  - USB stack fuzzing
