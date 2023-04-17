@@ -13,8 +13,8 @@ Script for poking at the router registration process with NetCloud.
 Quick instructions:
 
 - Install the `netifaces` package: `$ pip install netifaces`
-- The script requires the `api` folder and the `stream.pyc` file
-  - Note: The `stream.pyc` file has been patched to work on a Mac. You may decompile it with [decompyle3](https://github.com/rocky/python-decompile3) and adapt it to your needs.
+- The script requires the `api` folder and the `stream.crt` file
+  - Note: The `stream.crt` file has been patched to work on a Mac. You may adapt it.
 - In the script, change the variables which have `Required` in the comment
 - Adjust the flags as needed to control the different registration stages. **Note**:
   - To register a device, one needs valid NetCloud credentials and the MAC Address of the router.
