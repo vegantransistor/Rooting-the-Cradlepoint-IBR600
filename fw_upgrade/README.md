@@ -124,7 +124,7 @@ DECIMAL       HEXADECIMAL     DESCRIPTION
 
 ## Buid an update blob
 
-To build an update blob, `rootfsimage` (see [here](../README.md#building-the-squashfs-rootfs-image)) and `kernelimage` (see [here](../README.md#preparing-the-kernel-image)) images are needed. This update blob can be used via the web server or `scp` to update the device.
+To build an update blob, `rootfsimage` (see [here]([../README.md](https://github.com/vegantransistor/Rooting-the-Cradlepoint-IBR600/blob/main/README.md#building-the-squashfs-rootfs-image)) and `kernelimage` (see [here]([../README.md#](https://github.com/vegantransistor/Rooting-the-Cradlepoint-IBR600/blob/main/README.md#preparing-the-kernel-image)) images are needed. This update blob can be used via the web server or `scp` to update the device.
  
 1. First build the ubi image. Put the kernel binary `kernelimage` and the squashfs rootfs `rootfsimage` in a directory and use ubinize with following `ubiini` file:
 
