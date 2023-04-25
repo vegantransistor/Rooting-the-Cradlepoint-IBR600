@@ -121,3 +121,159 @@ DECIMAL       HEXADECIMAL     DESCRIPTION
 17258298      0x107573A       PEM certificate
 17260079      0x1075E2F       PEM certificate
 ```
+
+## Build an update blob
+
+To build an update blob, `rootfsimage` (see [here](https://github.com/vegantransistor/Rooting-the-Cradlepoint-IBR600/blob/main/README.md#building-the-squashfs-rootfs-image)) and `kernelimage` (see [here](https://github.com/vegantransistor/Rooting-the-Cradlepoint-IBR600/blob/main/README.md#preparing-the-kernel-image)) images are needed. This update blob can be downloaded via the web server or `scp` to update the device permanently.
+ 
+1. First build the ubi image. Put the kernel binary `kernelimage` and the squashfs root filesystem `rootfsimage` in a directory and use `ubinize` with following `ubiini` file:
+
+```
+[kernel]
+mode=ubi
+image=kernelimage
+vol_id=0
+vol_type=dynamic
+vol_name=kernel
+vol_alignment=1
+vol_size=3301376
+
+[ubi_rootfs]
+mode=ubi
+image=rootfsimage
+vol_id=1
+vol_type=dynamic
+vol_name=ubi_rootfs
+vol_alignment=1
+vol_size=19046400
+
+[rootfs_data]
+mode=ubi
+vol_id=2
+vol_type=dynamic
+vol_name=rootfs_data
+vol_flags=autoresize
+vol_alignment=1
+vol_size=1
+```
+
+Make the image:
+
+```
+ubinize -p 128KiB -m 2048 -o ubiimage ubiini
+```
+
+2. Package the ubi image:
+
+```
+mkimage -f fw.its ubiimage_packaged
+```
+
+Here is `fw.its`:
+
+```
+/dts-v1/;
+
+/ {
+        timestamp = <0x5bad4c90>;
+        description = "Coconut";
+
+        images {
+
+                ubi-201725729ebf13a0afae256e25235343ee03bdef {
+                        description = "Coconut";
+                        data = /incbin/("ubiimage");
+                        type = "firmware";
+                        arch = "arm";
+                        compression = "none";
+
+                        hash@1 {
+                                algo = "crc32";
+                        };
+                };
+        };
+};
+```
+
+3. Compress the packaged ubi image:
+
+```
+lzma -z -k ubiimage_packaged
+```
+
+4. Use following script to build the blob:
+```python
+from pathlib import Path
+import zlib
+
+ubi_file = Path("ubiimage_packaged.lzma")
+blob_file = Path("fw_plain.bin")
+headerimage = bytearray(b"\'\x05\x19V\x00\x00\x00\x00\\\xf0S\xd3\x01\x07eH\x80 \x80\x00\x80 \x80\x00\x00\x00\x00\x00\x05\x02\x04\x03IBR600C 6.0.00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+
+try:
+    with ubi_file.open(mode="rb") as ubi:
+        ubiimage = ubi.read()
+except OSError as error:
+    print(f"Could not read imput files: {error}")
+
+blobtmp1len = len(ubiimage)+8
+blobtmp1 = bytearray(blobtmp1len)
+blobtmp1[0:4] = blobtmp1len.to_bytes(4,'big')
+blobtmp1[8:] = ubiimage
+
+headerimage[12:16] = blobtmp1len.to_bytes(4,'big')
+crc1 = zlib.crc32(blobtmp1)
+headerimage[24:28] = crc1.to_bytes(4,'big')
+crc2 = zlib.crc32(headerimage)
+headerimage[4:8] = crc2.to_bytes(4,'big')
+
+blobtmp2len = len(headerimage)+len(blobtmp1)
+blobtmp2 = bytearray(blobtmp2len)
+blobtmp2[0:len(headerimage)] = headerimage
+blobtmp2[len(headerimage):] = blobtmp1
+
+try:
+    with blob_file.open(mode="wb") as blob:
+        blob.write(blobtmp2)
+        #blob.write(headerimageb)
+except OSError as error:
+    print(f"Could not write to rootfs: {error}")
+```
+
+5. Encrypt the blob with following script (replace IV and KEY with the correct ones):
+
+```python
+from Crypto.Cipher import AES
+from math import atan
+import base64
+from Crypto.Util.Padding import pad, unpad
+
+def encrypt(in_file, out_file):
+   bs = AES.block_size
+   key = b""
+   iv = b""
+   cipher = AES.new(key, AES.MODE_CBC, iv)
+   finished = False
+
+   while not finished:
+       chunk = in_file.read(bs)
+       if len(chunk) < (bs):
+           chunk = cipher.encrypt(pad(chunk,bs));
+           finished = True
+       else:
+           chunk = cipher.encrypt(chunk);
+       out_file.write(bytes(x for x in chunk))
+
+with open('fw_plain.bin', 'rb') as in_file, open('fw_encrypted.bin', 'wb') as out_file:
+   encrypt(in_file, out_file)
+```
+
+6. Upgrade the router via the webserver or using `scp` (put the correct router IP address):
+
+```bash
+scp fw_encrypted.bin admin@10.10.15.15:/fw_upgrade
+```
+
+
+
+
