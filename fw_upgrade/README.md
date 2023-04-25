@@ -268,7 +268,7 @@ with open('fw_plain.bin', 'rb') as in_file, open('fw_encrypted.bin', 'wb') as ou
    encrypt(in_file, out_file)
 ```
 
-6. Upgrade the router via the webserver or using `scp` (put routers IP address):
+6. Upgrade the router via the webserver or using `scp` (put the correct router IP address):
 
 ```bash
 scp fw_encrypted.bin admin@10.10.15.15:/fw_upgrade
