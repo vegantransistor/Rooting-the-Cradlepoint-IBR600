@@ -122,7 +122,7 @@ DECIMAL       HEXADECIMAL     DESCRIPTION
 17260079      0x1075E2F       PEM certificate
 ```
 
-## Buid an uodate blob
+## Buid an update blob
 
 To build an update blob, `rootfsimage` (see [here](../../README.md#building-the-squashfs-rootfs-image)) and `kernelimage` (see [here](../../README.md#preparing-the-kernel-image)) images are needed. This update blob can be used via the web server or `scp` to update the device.
  
