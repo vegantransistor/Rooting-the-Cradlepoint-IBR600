@@ -169,7 +169,7 @@ ubinize -p 128KiB -m 2048 -o ubiimage ubiini
 mkimage -f fw.its ubiimage_packaged
 ```
 
-Here is fw.its:
+Here is `fw.its`:
 
 ```
 /dts-v1/;
