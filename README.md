@@ -486,3 +486,6 @@ uid=0(root) gid=0(root)
 /service_manager # 
 ```
 
+## Responsible Disclosure
+
+We communicated our findings to Cradlepoint on 2023-01-05.
