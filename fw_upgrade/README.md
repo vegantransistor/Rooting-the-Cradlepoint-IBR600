@@ -4,6 +4,11 @@ Upgrading the router's firmware usually works via NetCloud, for newer firmware r
 
 Older firmware images are still available on https://cradlepoint.com. They are signed with a RSA private key and encrypted with AES256-CBC. However, the signature verification can be easily bypassed and the AES key is hard-coded in the router's Python middleware.
 
+* [Implementation](#implementation)
+* [Get the AES Decryption Key](#get-the-aes-decryption-key)
+* [Firmware Update File Analysis](#firmware-update-file-analysis)
+* [Build your own Firmware Update File](#build-your-own-firmware-update-file)
+
 ## Implementation
 
 The firmware upgrade is mainly implemented in the `/service_manager/services/utils/upgrade_write.pyc` file. This is what's going on:
@@ -122,11 +127,11 @@ DECIMAL       HEXADECIMAL     DESCRIPTION
 17260079      0x1075E2F       PEM certificate
 ```
 
-## Build an update blob
+## Build your own Firmware Update File
 
-To build an update blob, `rootfsimage` (see [here](https://github.com/vegantransistor/Rooting-the-Cradlepoint-IBR600/blob/main/README.md#building-the-squashfs-rootfs-image)) and `kernelimage` (see [here](https://github.com/vegantransistor/Rooting-the-Cradlepoint-IBR600/blob/main/README.md#preparing-the-kernel-image)) images are needed. This update blob can be downloaded via the web server or `scp` to update the device permanently.
+To build an update blob the [rootfsimage](https://github.com/vegantransistor/Rooting-the-Cradlepoint-IBR600/blob/main/README.md#building-the-squashfs-rootfs-image) and [kernelimage](https://github.com/vegantransistor/Rooting-the-Cradlepoint-IBR600/blob/main/README.md#preparing-the-kernel-image) images are needed. This update blob can be uploaded via the router's web interface or copied via `scp` to update the device permanently.
  
-1. First build the ubi image. Put the kernel binary `kernelimage` and the squashfs root filesystem `rootfsimage` in a directory and use `ubinize` with following `ubiini` file:
+1. First, build the ubi image. Put the kernel binary `kernelimage` and the squashfs root filesystem `rootfsimage` in a directory and use the `ubinize` tool with the following `ubiini` file:
 
 ```
 [kernel]
@@ -159,17 +164,17 @@ vol_size=1
 
 Make the image:
 
-```
-ubinize -p 128KiB -m 2048 -o ubiimage ubiini
+```bash
+$ ubinize -p 128KiB -m 2048 -o ubiimage ubiini
 ```
 
 2. Package the ubi image:
 
 ```
-mkimage -f fw.its ubiimage_packaged
+$ mkimage -f fw.its ubiimage_packaged
 ```
 
-Here is `fw.its`:
+Here's the `fw.its` file that you can use:
 
 ```
 /dts-v1/;
@@ -198,17 +203,20 @@ Here is `fw.its`:
 3. Compress the packaged ubi image:
 
 ```
-lzma -z -k ubiimage_packaged
+$ lzma -z -k ubiimage_packaged
 ```
 
-4. Use following script to build the blob:
+4. Use the following script to build the blob:
+
 ```python
 from pathlib import Path
 import zlib
 
 ubi_file = Path("ubiimage_packaged.lzma")
 blob_file = Path("fw_plain.bin")
-headerimage = bytearray(b"\'\x05\x19V\x00\x00\x00\x00\\\xf0S\xd3\x01\x07eH\x80 \x80\x00\x80 \x80\x00\x00\x00\x00\x00\x05\x02\x04\x03IBR600C 6.0.00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+headerimage = bytearray(
+    b"'\x05\x19V\x00\x00\x00\x00\\\xf0S\xd3\x01\x07eH\x80 \x80\x00\x80 \x80\x00\x00\x00\x00\x00\x05\x02\x04\x03IBR600C 6.0.00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+)
 
 try:
     with ubi_file.open(mode="rb") as ubi:
@@ -216,31 +224,30 @@ try:
 except OSError as error:
     print(f"Could not read imput files: {error}")
 
-blobtmp1len = len(ubiimage)+8
+blobtmp1len = len(ubiimage) + 8
 blobtmp1 = bytearray(blobtmp1len)
-blobtmp1[0:4] = blobtmp1len.to_bytes(4,'big')
+blobtmp1[0:4] = blobtmp1len.to_bytes(4, "big")
 blobtmp1[8:] = ubiimage
 
-headerimage[12:16] = blobtmp1len.to_bytes(4,'big')
+headerimage[12:16] = blobtmp1len.to_bytes(4, "big")
 crc1 = zlib.crc32(blobtmp1)
-headerimage[24:28] = crc1.to_bytes(4,'big')
+headerimage[24:28] = crc1.to_bytes(4, "big")
 crc2 = zlib.crc32(headerimage)
-headerimage[4:8] = crc2.to_bytes(4,'big')
+headerimage[4:8] = crc2.to_bytes(4, "big")
 
-blobtmp2len = len(headerimage)+len(blobtmp1)
+blobtmp2len = len(headerimage) + len(blobtmp1)
 blobtmp2 = bytearray(blobtmp2len)
-blobtmp2[0:len(headerimage)] = headerimage
-blobtmp2[len(headerimage):] = blobtmp1
+blobtmp2[0 : len(headerimage)] = headerimage
+blobtmp2[len(headerimage) :] = blobtmp1
 
 try:
     with blob_file.open(mode="wb") as blob:
         blob.write(blobtmp2)
-        #blob.write(headerimageb)
 except OSError as error:
     print(f"Could not write to rootfs: {error}")
 ```
 
-5. Encrypt the blob with following script (replace IV and KEY with the correct ones):
+5. Encrypt the blob with the following script (replace `IV` and `KEY` with the correct ones):
 
 ```python
 from Crypto.Cipher import AES
@@ -248,32 +255,30 @@ from math import atan
 import base64
 from Crypto.Util.Padding import pad, unpad
 
+
 def encrypt(in_file, out_file):
-   bs = AES.block_size
-   key = b""
-   iv = b""
-   cipher = AES.new(key, AES.MODE_CBC, iv)
-   finished = False
+    bs = AES.block_size
+    key = b""
+    iv = b""
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    finished = False
 
-   while not finished:
-       chunk = in_file.read(bs)
-       if len(chunk) < (bs):
-           chunk = cipher.encrypt(pad(chunk,bs));
-           finished = True
-       else:
-           chunk = cipher.encrypt(chunk);
-       out_file.write(bytes(x for x in chunk))
+    while not finished:
+        chunk = in_file.read(bs)
+        if len(chunk) < (bs):
+            chunk = cipher.encrypt(pad(chunk, bs))
+            finished = True
+        else:
+            chunk = cipher.encrypt(chunk)
+        out_file.write(bytes(x for x in chunk))
 
-with open('fw_plain.bin', 'rb') as in_file, open('fw_encrypted.bin', 'wb') as out_file:
-   encrypt(in_file, out_file)
+
+with open("fw_plain.bin", "rb") as in_file, open("fw_encrypted.bin", "wb") as out_file:
+    encrypt(in_file, out_file)
 ```
 
-6. Upgrade the router via the webserver or using `scp` (put the correct router IP address):
+6. Upgrade the router via the web interface or by using `scp`, for example:
 
 ```bash
-scp fw_encrypted.bin admin@10.10.15.15:/fw_upgrade
+$ scp fw_encrypted.bin admin@10.10.15.15:/fw_upgrade
 ```
-
-
-
-

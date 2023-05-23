@@ -150,6 +150,12 @@ $ pip install -e .
 $ mitmproxy --mode transparent --set confdir=$HOME/mitmproxy --rawtcp --tcp-hosts ".*" -s mitmproxy_netcloud_logging.py
 ```
 
+7. Edit NetCloud packets on the fly:
+
+- Copy [netcloud_parser.py](./scripts/netcloud_parser.py) to the `<mitmproxy-root>mitmproxy/tools/console/` folder.
+- Next, apply the [patch](./scripts/add-netcloud-editor.patch): `$ git apply add-netcloud-editor.patch`.
+- Now when you fire up mitmproxy you'll be able to modify NetCloud packets (see [tutorial](https://docs.mitmproxy.org/stable/mitmproxytutorial-modifyrequests/) for details).
+
 ## Disconnect any Cradlepoint Router from NetCloud
 
 **TODO**
