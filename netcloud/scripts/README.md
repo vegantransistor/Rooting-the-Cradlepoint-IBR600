@@ -23,7 +23,7 @@ Quick instructions:
 
 ## mitmproxy_netcloud_rce.py
 
-Mitmproxy script to replace the router's pickled license file with a reverse shell payload (see [here](../README.md##rce) for details).
+Mitmproxy script to replace the router's pickled license file with a reverse shell payload (see [here](../README.md#rce-through-deserializing-untrusted-data) for details).
 
 To get a shell on the router, please first follow [these](../README.md#mitm-netcloud-traffic-with-mitmproxy) instructions. Adapt `_ATTACKER_IP` and `_ATTACKER_PORT` variables in the script.
 

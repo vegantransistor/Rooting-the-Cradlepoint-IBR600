@@ -5,7 +5,7 @@
 - [Decrypt NetCloud Traffic in Wireshark](#decrypt-netcloud-traffic-in-wireshark)
 - [MITM NetCloud Traffic with mitmproxy](#mitm-netcloud-traffic-with-mitmproxy)
 - [Disconnect any Cradlepoint Router from NetCloud](#disconnect-any-cradlepoint-router-from-netcloud)
-- [RCE](#rce)
+- [RCE](#rce-through-deserializing-untrusted-data)
 
 ## Recon
 
