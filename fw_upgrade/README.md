@@ -13,7 +13,7 @@ The firmware upgrade is mainly implemented in the `/service_manager/services/uti
 3. `_write()` --> writes data to memory flash
 4. `upgrade_validate()` --> validates the file and checks the signature by calling `upgrade_validate_signature()`
 
-If the version string in the firmware header matches a certain value, the signature verification check is ignored:
+The firmware update blob contains a header with the firmware version. This header is **not signed** and therefore can be manipulated. If the version string in the firmware header matches a certain value, the signature verification check is ignored:
 
 ```python
 if upgrade_int >= 458752:
